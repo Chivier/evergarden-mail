@@ -67,8 +67,8 @@ docker compose ps
 
 ## 4. 添加邮箱
 
-1. 点侧边栏“邮箱”旁的 **+**（“管理邮箱”）。
-2. 展开“添加邮箱”并填写表单。密码邮箱的示例：
+1. 打开 **设置 → 邮箱管理**（也可以点侧边栏“邮箱”旁的 **+**）。
+2. 点击“添加邮箱”并填写表单。密码邮箱的示例：
 
    | 字段 | 示例 |
    |---|---|
@@ -83,17 +83,14 @@ docker compose ps
    | 允许移动到 | 必须包含归档文件夹；不能是废纸篓或垃圾邮件文件夹 |
 
    Gmail、iCloud 等服务商的取值见 [providers.md](../providers.md)（英文）。
-3. 点“保存私有配置”。提示为“邮箱已写入本机私有配置；请完成凭据/OAuth 后重启服务。”
+3. 点击“保存邮箱”，再点击邮箱卡片上的“设置应用密码”，输入服务商的应用专用密码并保存。
+   密码会加密保存，不会再次显示。OAuth 邮箱请在重启后点击“连接 OAuth”。
 
-表单从不接收密码。请在命令行保存：
+也可以继续通过隐藏输入的终端提示保存密码：
 
 ```bash
 docker compose exec approval-ui evergarden-provider-credential set-password --account personal
 ```
-
-在 `App password:` 提示后输入应用专用密码（不会回显）。命令输出
-`{"account": "personal", "credential_version": 1, "stored": true}`。如需从密码管理器
-通过管道输入，在 `exec` 后加 `-T`，并把密码从标准输入传入。
 
 然后重启读取邮箱列表的服务。每次修改邮箱后都需要这一步：
 
@@ -117,9 +114,9 @@ docker compose restart mcp approval-ui mail-ui
 
 其他原因有“服务器拒绝连接”（主机或端口错误）、“认证失败”（重新运行 `set-password`，
 或重新连接 OAuth）、“服务器响应超时”以及笼统的“同步失败”。“技术细节”中是服务商的原始
-错误，例如 `gaierror: [Errno -2] Name or service not known`。提示会一直显示，直到你关闭它。网页可以添加和停用
-邮箱，但不能编辑，所以主机或文件夹写错时，请用文本编辑器修改
-`.local/run/mail-config/mail_accounts.json`。之后按上面的方法重启并再次同步。
+错误，例如 `gaierror: [Errno -2] Name or service not known`。提示会一直显示，直到你关闭它。请在 **设置 → 邮箱管理 → 编辑** 中更正主机、端口或文件夹，重启后再次同步。
+设置页还支持添加、启停、移除邮箱和更换应用密码。移除会保留已同步邮件、加密凭据和审批历史。
+运行配置和永久 API 令牌的用法见[网页设置](settings.md)。
 
 此后 `scheduler` 服务每小时第 03 分钟自动同步所有邮箱。
 

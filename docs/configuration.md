@@ -1,6 +1,9 @@
 # Configuration reference
 
-Evergarden reads settings from two files. `./deploy/setup` writes both.
+Evergarden reads its base settings from two files. `./deploy/setup` writes both.
+The [web settings page](settings.md) can save overrides for supported application
+settings in `.local/run/mail-config/runtime-settings.json`. These overrides take
+precedence at application startup; they are private and never contain credentials.
 
 | File | Read by | Contains |
 |---|---|---|

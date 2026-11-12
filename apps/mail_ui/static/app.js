@@ -949,7 +949,7 @@ function renderApiKeys() {
     list.append(node("div", { className: `mcp-key${key.expired ? " expired" : ""}` }, [
       node("div", { className: "mcp-key-main" }, [
         node("strong", { text: key.client_id }),
-        node("p", { className: "muted", text: t(key.expired ? "mcp.keyExpired" : "mcp.keyExpires", { summary, date: key.expires_at.slice(0, 10) }) }),
+        node("p", { className: "muted", text: t(key.expires_at === null ? "mcp.keyNeverExpires" : key.expired ? "mcp.keyExpired" : "mcp.keyExpires", { summary, date: key.expires_at?.slice(0, 10) || "" }) }),
       ]),
       node("button", {
         type: "button", className: "danger-ghost", text: t("mcp.revoke"),
@@ -981,6 +981,11 @@ async function createApiKey(event) {
     showNotice(t("mcp.keysLoading"), true);
     return;
   }
+  const never = byId("apiKeyTtl").value === "never";
+  if (never && !byId("apiKeyNoExpiryAck").checked) {
+    showNotice(t("mcp.noExpiryRequired"), true);
+    return;
+  }
   try {
     const issued = await request("/api/admin/api-keys", {
       method: "POST",
@@ -988,7 +993,8 @@ async function createApiKey(event) {
         expected_revision: state.apiKeys.revision,
         label: byId("apiKeyLabel").value,
         scopes,
-        ttl_days: Number(byId("apiKeyTtl").value),
+        ttl_days: never ? null : Number(byId("apiKeyTtl").value),
+        acknowledge_no_expiry: never && byId("apiKeyNoExpiryAck").checked,
       },
     });
     state.apiKeys = { revision: issued.revision, keys: issued.keys, max_keys: issued.max_keys };
@@ -996,6 +1002,7 @@ async function createApiKey(event) {
     byId("apiKeyToken").textContent = issued.token;
     byId("apiKeyIssued").hidden = false;
     byId("apiKeyLabel").value = "";
+    byId("apiKeyNoExpiryAck").checked = false;
     renderApiKeys();
     // Re-render so every snippet below now carries the real bearer.
     renderMcpSteps();
@@ -1403,12 +1410,19 @@ function bindEvents() {
   byId("copyApiKeyButton").addEventListener("click", () => copyText(state.mcpToken, t("mcp.copiedKey")));
   // Losing the plaintext on close is the point: it must not survive the dialog.
   byId("mcpDialog").addEventListener("close", () => { clearIssuedToken(); renderMcpSteps(); });
+  window.addEventListener("pagehide", () => { clearIssuedToken(); renderMcpSteps(); });
   document.querySelectorAll("[data-copy-target]").forEach((button) => button.addEventListener(
     "click",
     () => copyText(byId(button.dataset.copyTarget).textContent, t("common.copied")),
   ));
   byId("verificationForm").addEventListener("submit", findCodes);
-  byId("accountAdminButton").addEventListener("click", () => { closeNav(); openAccountAdmin(); });
+  byId("accountAdminButton").addEventListener("click", () => { window.location.href = "/settings#accounts"; });
+  byId("apiKeyTtl").addEventListener("change", () => {
+    const never = byId("apiKeyTtl").value === "never";
+    byId("apiKeyNoExpiryRisk").hidden = !never;
+    byId("apiKeyNoExpiryAck").required = never;
+    byId("apiKeyNoExpiryAck").checked = false;
+  });
   byId("accountForm").addEventListener("submit", addAccount);
   bindCredentialSuggestion(byId("accountForm"));
   byId("logoutButton").addEventListener("click", () => logout().catch((error) => showNotice(error.message, true)));

@@ -101,3 +101,5 @@ docker compose up -d --build
 ## 许可证
 
 [MIT](LICENSE)
+
+[网页设置](docs/zh-CN/settings.md)：邮箱增删改、运行配置和 API 令牌。

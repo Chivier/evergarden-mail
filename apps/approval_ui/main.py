@@ -15,9 +15,11 @@ import httpx
 import psycopg
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
+from apps.approval_ui.credentials import install_credential_routes
 from evergarden.approvals.models import Actor
 from evergarden.approvals.service import (
     ApprovalError,
@@ -155,6 +157,13 @@ def create_app(
         )
     app = FastAPI(title="Evergarden Approval UI", docs_url=None, redoc_url=None)
     session_cookie = session_cookie_name(settings.admin_secure_cookies)
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request(_request: Request, _exc: RequestValidationError):
+        # Validation details can echo input, including pasted credentials.
+        return JSONResponse(
+            {"detail": "Invalid request. Check the fields and try again."}, status_code=422
+        )
 
     @app.exception_handler(ApprovalError)
     async def approval_error(_request: Request, exc: ApprovalError):
@@ -495,6 +504,8 @@ def create_app(
             raise HTTPException(status_code=404, detail="asset not found")
         path, media_type = allowed[asset]
         return FileResponse(path, media_type=media_type)
+
+    install_credential_routes(app, settings, require_admin, require_csrf)
 
     @app.get("/oauth/accounts")
     def oauth_accounts(request: Request) -> dict:

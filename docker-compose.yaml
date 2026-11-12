@@ -69,6 +69,7 @@ services:
         condition: service_healthy
     volumes:
       - ./.local/run/pgpass:/run/secrets/pgpass:ro
+      - ./.local/run/mail-config:/run/mail-config:ro
     restart: "no"
     networks:
       - db

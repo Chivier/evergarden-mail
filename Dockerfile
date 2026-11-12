@@ -12,7 +12,10 @@ RUN groupadd --system --gid 10001 evergarden \
 
 WORKDIR /app
 COPY --chown=10001:10001 . /app
-RUN python -m pip install uv==0.11.7 \
+# The runtime UID is operator-selectable. Source copied from a checkout with
+# umask 077 must remain readable by that UID, not just the image's build owner.
+RUN chmod -R a+rX /app \
+    && python -m pip install uv==0.11.7 \
     && uv sync --frozen --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"

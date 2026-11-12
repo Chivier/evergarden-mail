@@ -143,6 +143,70 @@ python3 -c 'import json; print(json.dumps({"items": [{"draft_id": "smoke", "payl
 [[ "$(curl -sS -b "$work/cookies" -o /dev/null -w '%{http_code}' -H "x-csrf-token: $csrf" \
   -H 'content-type: application/json' --data @"$work/revoke.json" "$origin/approvals/revoke")" == "200" ]]
 
+step "settings, mailbox edits, encrypted password and permanent key revocation"
+python3 - "$origin" "$work/cookies" <<'PY'
+import http.cookiejar
+import json
+import sys
+import urllib.error
+import urllib.request
+
+origin, cookie_file = sys.argv[1:]
+jar = http.cookiejar.MozillaCookieJar(cookie_file)
+jar.load(ignore_discard=True, ignore_expires=True)
+opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+csrf = ''
+
+
+def call(path, method='GET', body=None, token=None, expected=200):
+    headers = {'Accept': 'application/json', 'X-CSRF-Token': csrf}
+    if body is not None:
+        headers['Content-Type'] = 'application/json'
+    if token is not None:
+        headers['Authorization'] = 'Bearer ' + token
+    request = urllib.request.Request(origin + path, data=json.dumps(body).encode() if body is not None else None, headers=headers, method=method)
+    try:
+        response = opener.open(request, timeout=20)
+    except urllib.error.HTTPError as error:
+        response = error
+    assert response.status == expected, (path, response.status)
+    data = response.read()
+    return json.loads(data) if 'application/json' in response.headers.get('Content-Type', '') else data
+
+
+csrf = call('/api/session')['csrf']
+assert b'id="mailboxForm"' in call('/settings')
+accounts = call('/api/admin/accounts')
+account = {
+    'alias': 'smoke-settings', 'address': 'smoke@example.test', 'imap_host': 'imap.example.test',
+    'smtp_host': 'smtp.example.test', 'auth_kind': 'password', 'credential_record': 'password:smoke-settings',
+    'folders': ['INBOX', 'Archive'], 'archive_folder': 'Archive', 'sent_folder': 'Sent',
+    'trash_folder': 'Trash', 'safe_move_folders': ['Archive'], 'enabled': False,
+}
+added = call('/api/admin/accounts', 'POST', {'expected_revision': accounts['revision'], 'account': account})
+changed = call('/api/admin/accounts/smoke-settings', 'PATCH', {'expected_revision': added['revision'], 'account': {'smtp_port': 465, 'smtp_mode': 'ssl'}})
+assert changed['accounts'][0]['smtp_port'] == 465
+saved = call('/oauth/credentials/smoke-settings/password', 'POST', {'expected_revision': changed['revision'], 'password': 'smoke-only-app-password'})
+assert saved['stored'] is True
+assert call('/oauth/credentials')['accounts'][0]['credential_present'] is True
+assert call('/api/admin/accounts/smoke-settings', 'DELETE', {'expected_revision': changed['revision'], 'confirmation': 'smoke-settings'})['accounts'] == []
+settings = call('/api/admin/settings')
+updated = call('/api/admin/settings', 'PATCH', {'expected_revision': settings['revision'], 'changes': {'log_level': 'WARNING'}})
+assert updated['restart_required'] is True
+keys = call('/api/admin/api-keys')
+body = {'expected_revision': keys['revision'], 'label': 'permanent-smoke', 'scopes': ['mail:metadata'], 'ttl_days': None}
+call('/api/admin/api-keys', 'POST', body, expected=400)
+issued = call('/api/admin/api-keys', 'POST', {**body, 'acknowledge_no_expiry': True})
+assert next(key for key in issued['keys'] if key['client_id'] == issued['client_id'])['expires_at'] is None
+rpc = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'}
+assert 'result' in call('/mcp', 'POST', rpc, token=issued['token'])
+call('/api/admin/api-keys/' + issued['client_id'] + '/revoke', 'POST', {'expected_revision': issued['revision']})
+call('/mcp', 'POST', rpc, token=issued['token'], expected=401)
+print('settings, credential encryption path and permanent-key revocation passed')
+PY
+# A fresh process in a container with a read-only config mount sees saved overrides.
+docker compose exec -T mcp python -c 'from evergarden.config import get_settings; assert get_settings().log_level == "WARNING"'
+
 step "logout revokes the session on both browser surfaces"
 cp "$work/cookies" "$work/copied-cookies"
 [[ "$(curl -sS -b "$work/cookies" -o /dev/null -w '%{http_code}' -X POST \

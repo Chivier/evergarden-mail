@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title data-i18n="settings.pageTitle">Settings · Evergarden</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/tokens.css">
+  <link rel="stylesheet" href="/assets/components.css">
+  <link rel="stylesheet" href="/assets/settings.css">
+  <script src="/assets/i18n.js" defer></script>
+  <script src="/assets/locale-en.js" defer></script>
+  <script src="/assets/locale-zh-CN.js" defer></script>
+  <script src="/assets/ui.js" defer></script>
+  <script src="/assets/http.js" defer></script>
+  <script src="/assets/settings.js" defer></script>
+</head>
+<body>
+<header class="eg-topbar">
+  <a class="eg-brand" href="/"><img class="eg-logo" src="/assets/logo.svg" width="30" height="30" alt="">Evergarden</a>
+  <span class="eg-topbar-title" data-i18n="settings.title">Settings</span><span class="eg-spacer"></span>
+  <a class="eg-back" href="/" data-i18n="settings.back">← Back to mail</a><div data-lang-switch></div>
+</header>
+<div class="settings-layout">
+  <aside class="settings-nav"><p class="eyebrow" data-i18n="settings.workspace">Your workspace</p>
+    <nav aria-label="Settings" data-i18n-aria-label="settings.title">
+      <a href="#accounts" data-i18n="settings.accounts">Mailboxes</a>
+      <a href="#keys" data-i18n="mcp.keys">API keys</a>
+      <a href="#runtime" data-i18n="settings.runtime">Runtime configuration</a>
+    </nav>
+    <p class="muted nav-note" data-i18n="settings.private">Private configuration, stored on this server.</p>
+  </aside>
+  <main>
+    <div id="settingsNotice" class="notice" role="status" tabindex="-1" hidden></div>
+    <div id="loadState" class="card" role="status" data-i18n="common.loading">Loading</div>
+    <div id="adminUnavailable" class="notice error" hidden data-i18n="settings.unavailable">Configuration editing is disabled by the operator. Enable EVERGARDEN_MAIL_UI_ACCOUNT_ADMIN_ENABLED in runtime.env and recreate the web services to use it.</div>
+    <section id="accounts" class="settings-panel" hidden aria-labelledby="accountsHeading">
+      <div class="section-head"><div><p class="eyebrow" data-i18n="settings.connection">Connections</p><h1 id="accountsHeading" data-i18n="settings.accounts">Mailboxes</h1><p class="muted" data-i18n="settings.accountsIntro">Manage sign-in addresses, servers and folders in one place.</p></div><button id="newMailbox" class="primary" type="button" disabled data-i18n="accounts.add">Add a mailbox</button></div>
+      <p class="notice" data-i18n="settings.accountRestart">Mailbox configuration changes take effect after an application restart. Saved passwords are available immediately. Removing a mailbox preserves its synced mail, credentials and approval history.</p>
+      <details class="apply-help"><summary data-i18n="settings.apply">Apply saved configuration</summary><p data-i18n="settings.applyHelp">Run these commands in the deployment directory. Also restart any enabled scheduler, OAuth maintenance and MFA services. Existing operations may finish before the restart.</p><pre>docker compose run --rm migrate
+docker compose restart mcp approval-ui mail-ui</pre></details>
+      <div id="mailboxList" class="card-list"></div>
+      <section id="mailboxEditor" class="card editor" hidden aria-labelledby="editorTitle"><h2 id="editorTitle" data-i18n="accounts.add">Add a mailbox</h2>
+      <p class="muted" data-i18n="settings.aliasHelp">The alias identifies stored mail and cannot be renamed. Save the mailbox first, then set an app password or connect OAuth.</p>
+        <form id="mailboxForm" class="account-form">
+          <div class="form-grid compact">
+            <label><span data-i18n="accounts.alias">Alias</span><input name="alias" pattern="[a-z][a-z0-9_\-]{0,63}" required></label>
+            <label><span data-i18n="accounts.address">Sign-in address</span><input name="address" type="email" required></label>
+            <label class="wide"><span data-i18n="accounts.sendFrom">Allowed From addresses (comma-separated, first is the default)</span><input name="send_from_addresses" placeholder="public-name@example.com, login@example.com"></label>
+            <label><span data-i18n="accounts.auth">Authentication</span><select name="auth_kind"><option value="oauth2">OAuth 2.0</option><option value="password" data-i18n="accounts.appPassword">App password</option></select></label>
+            <label><span data-i18n="accounts.credential">Credential record</span><input name="credential_record" placeholder="microsoft:&lt;alias&gt;" pattern="[A-Za-z0-9][A-Za-z0-9:_\-]{0,199}" title="Suggested from the alias and authentication. Any stable id works; keep it once a credential is stored." data-i18n-title="accounts.credentialHint" required></label>
+            <label><span data-i18n="accounts.imapHost">IMAP host</span><input name="imap_host" required></label>
+            <label><span data-i18n="accounts.imapPort">IMAP port</span><input name="imap_port" type="number" min="1" max="65535" value="993" required></label>
+            <label><span data-i18n="accounts.smtpHost">SMTP host</span><input name="smtp_host" required></label>
+            <label><span data-i18n="accounts.smtpPort">SMTP port</span><input name="smtp_port" type="number" min="1" max="65535" value="587" required></label>
+            <label><span data-i18n="accounts.smtpMode">SMTP security</span><select name="smtp_mode"><option value="starttls">STARTTLS</option><option value="ssl" data-i18n="accounts.implicitTls">Implicit TLS</option></select></label>
+            <label><span data-i18n="accounts.archiveFolder">Archive folder</span><input name="archive_folder" value="Archive" required></label>
+            <label><span data-i18n="accounts.sentFolder">Sent folder</span><input name="sent_folder" value="Sent" required></label>
+            <label><span data-i18n="accounts.trashFolder">Trash folder</span><input name="trash_folder" value="Trash" required></label>
+            <label class="wide"><span data-i18n="accounts.folders">Folders to sync</span><input name="folders" value="INBOX, Archive" required></label>
+            <label class="wide"><span data-i18n="accounts.safeMove">Allowed move destinations</span><input name="safe_move_folders" value="Archive" required></label>
+            <label class="wide check-label"><input name="copy_preserve_source_fallback" type="checkbox"> <span data-i18n="accounts.copyFallback">If the provider has no native MOVE, allow COPY and keep the source message</span></label>
+            <label><span data-i18n="settings.provider">Provider</span><select name="provider"><option value="" data-i18n="settings.detectProvider">Detect automatically</option><option value="gmail">Gmail</option><option value="microsoft">Microsoft</option><option value="icloud">iCloud</option><option value="imap">IMAP</option></select></label>
+            <label class="check-label"><input name="enabled" type="checkbox" checked><span data-i18n="accounts.enabled">Enabled</span></label>
+          </div>
+          <p hidden class="safety-copy" data-i18n="accounts.safety">No passwords or tokens are accepted here. OAuth and MFA are completed on separate human pages; "Disable" only deactivates the mailbox and keeps its credentials and archive.</p>
+          <div class="actions"><button type="button" class="secondary" id="cancelMailbox" data-i18n="common.cancel">Cancel</button><button type="submit" class="primary" data-i18n="settings.saveMailbox">Save mailbox</button></div>
+        </form>
+      </section>
+    </section>
+    <section id="keys" class="settings-panel" hidden aria-labelledby="keysHeading">
+      <div class="section-head"><div><p class="eyebrow" data-i18n="settings.agentAccess">Agent access</p><h1 id="keysHeading" data-i18n="mcp.keys">API keys</h1><p class="muted" data-i18n="mcp.tokenSafety">Issuing and revoking keys take effect immediately.</p></div></div>
+      <div class="card"><label><span data-i18n="mcp.resource">MCP resource</span><input id="settingsResource" readonly></label><p class="muted" data-i18n="settings.keyHelp">Create a separate token for each client. Grant only the permissions it needs.</p></div>
+      <p id="keysUnavailable" class="notice" hidden data-i18n="settings.keysUnavailable">API key issuance is disabled by the operator.</p>
+      <div id="settingsKeyList" class="card-list"></div>
+      <div id="issuedKey" class="card issued" hidden><h2 data-i18n="settings.keyCreated">Save your new token</h2><p data-i18n="mcp.issuedWarning">Shown only once. Store it securely before leaving this page.</p><div class="token-row"><input id="issuedToken" readonly aria-label="API token" data-i18n-aria-label="settings.apiToken" autocomplete="off"><button id="copyIssuedToken" type="button" class="secondary" data-i18n="common.copy">Copy</button><button id="dismissIssuedToken" type="button" class="secondary" data-i18n="common.close">Close</button></div></div>
+      <form id="settingsKeyForm" class="card"><h2 data-i18n="mcp.createKey">Create API key</h2><div class="form-grid">
+        <label><span data-i18n="mcp.keyName">Name</span><input name="label" maxlength="48" required placeholder="laptop" autocomplete="off"></label>
+        <label><span data-i18n="mcp.ttl">Valid for</span><select id="settingsKeyTtl" name="ttl"><option value="30" data-i18n="mcp.ttl30">30 days</option><option value="90" selected data-i18n="mcp.ttl90">90 days</option><option value="365" data-i18n="mcp.ttl365">365 days</option><option value="never" data-i18n="mcp.ttlNever">Never expires</option></select></label>
+      </div><label id="settingsKeyRisk" class="risk check-label" hidden><input id="settingsKeyAck" type="checkbox"><span data-i18n="mcp.noExpiryRisk">I understand that a leaked token allows continued access until I revoke it. I will store it securely and revoke it when no longer needed.</span></label>
+      <fieldset><legend data-i18n="mcp.pickScopes">Choose scopes one by one</legend><div id="settingsScopes" class="scope-grid"></div></fieldset>
+      <div class="actions"><button class="primary" type="submit" data-i18n="mcp.createKey">Create API key</button></div></form>
+    </section>
+    <section id="runtime" class="settings-panel" hidden aria-labelledby="runtimeHeading">
+      <div class="section-head"><div><p class="eyebrow" data-i18n="settings.deployment">Application</p><h1 id="runtimeHeading" data-i18n="settings.runtime">Runtime configuration</h1><p class="muted" data-i18n="settings.runtimeIntro">Edit application settings without editing environment files.</p></div></div>
+      <p class="notice" data-i18n="settings.runtimeHelp">Saved values override the matching environment variables after an application restart. Database access, encryption keys, deployment identity, ports and feature gates are managed on the server.</p>
+      <div id="restartPending" class="notice" hidden data-i18n="settings.pending">Saved changes are waiting for an application restart.</div>
+      <details class="apply-help"><summary data-i18n="settings.apply">Apply saved configuration</summary><p data-i18n="settings.applyHelp">Run these commands in the deployment directory. Also restart any enabled scheduler, OAuth maintenance and MFA services. Existing operations may finish before the restart.</p><pre>docker compose run --rm migrate
+docker compose restart mcp approval-ui mail-ui</pre></details>
+      <form id="runtimeForm"><div id="runtimeFields"></div><div class="actions"><button type="button" class="secondary" id="reloadRuntime" data-i18n="common.refresh">Refresh</button><button class="primary" type="submit" data-i18n="settings.saveRuntime">Save configuration</button></div></form>
+    </section>
+  </main>
+</div>
+<dialog id="passwordDialog" aria-labelledby="passwordTitle" class="card password-dialog"><form id="passwordForm"><h2 id="passwordTitle" data-i18n="settings.setPassword">Set app password</h2><p id="passwordAccount" class="muted"></p><label><span data-i18n="accounts.appPassword">App password</span><input id="mailboxPassword" type="password" autocomplete="new-password" maxlength="16384" required></label><p class="muted" data-i18n="settings.passwordHelp">The password is encrypted on the server and is never shown again. Leave this dialog closed to keep the existing password.</p><div class="actions"><button id="cancelPassword" class="secondary" type="button" data-i18n="common.cancel">Cancel</button><button class="primary" type="submit" data-i18n="settings.savePassword">Save password</button></div></form></dialog>
+</body>
+</html>

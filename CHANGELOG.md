@@ -4,6 +4,17 @@ All notable changes are listed here. Versions follow
 [Semantic Versioning](https://semver.org/); before 1.0, minor versions may
 contain breaking changes.
 
+## Unreleased
+
+- Dedicated settings page with mailbox editing, add/remove, enable/disable,
+  encrypted app-password updates and validated runtime configuration overrides.
+  Mailbox/configuration changes require an application restart; secrets and
+  deployment identity remain managed on the server.
+- Non-expiring API keys with an explicit risk acknowledgement and immediate
+  revocation. Existing keys keep their current expiry.
+- SOPS materialization now defaults to 15 sign-in failures and 365-day
+  compatibility grants, matching setup; no-expiry grants require explicit opt-in.
+
 ## 0.1.0 - initial public release
 
 First public release.

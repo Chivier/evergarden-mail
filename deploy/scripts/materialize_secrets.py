@@ -185,6 +185,17 @@ def main() -> int:
     parser.add_argument("--enable-account-admin", action="store_true")
     parser.add_argument("--enable-api-keys", action="store_true")
     parser.add_argument(
+        "--token-ttl-days",
+        type=int,
+        default=365,
+        help="compatibility token lifetime: 1-365 days, or 0 for no expiry",
+    )
+    parser.add_argument(
+        "--acknowledge-no-expiry",
+        action="store_true",
+        help="accept that leaked non-expiring tokens grant access until explicitly revoked",
+    )
+    parser.add_argument(
         "--host-document",
         default="host.sops.yaml",
         help="file name of the private host SOPS document inside the config directory",
@@ -198,6 +209,12 @@ def main() -> int:
         ),
     )
     args = parser.parse_args()
+    if not 0 <= args.token_ttl_days <= 365:
+        raise RuntimeError("token lifetime must be 0-365 days")
+    if args.token_ttl_days == 0 and not args.acknowledge_no_expiry:
+        raise RuntimeError(
+            "non-expiring tokens require --acknowledge-no-expiry; leaked tokens grant access until revoked"
+        )
     if args.enable_account_admin and not args.enable_human_web:
         raise RuntimeError("account administration requires enabled human web surfaces")
     if args.enable_api_keys and not args.enable_human_web:
@@ -261,7 +278,11 @@ def main() -> int:
         if public_origin
         else common["microsoft_oauth_redirect_uri"]
     )
-    expires = dt.datetime.now(dt.UTC) + dt.timedelta(days=45)
+    expires = (
+        dt.datetime.now(dt.UTC) + dt.timedelta(days=args.token_ttl_days)
+        if args.token_ttl_days
+        else None
+    )
     scopes = common["clients"]
     raw_accounts = common.get("accounts")
     try:
@@ -292,7 +313,9 @@ def main() -> int:
                 "subject": f"{runtime_mode}:{client_id}",
                 "audience": [mcp_resource],
                 "scopes": scopes[client_id]["scopes"],
-                "expires_at": expires.isoformat(timespec="seconds"),
+                "expires_at": expires.isoformat(timespec="seconds")
+                if expires is not None
+                else None,
             }
         )
         atomic_private(run_root / "smoke" / f"{client_id}.token", token + "\n")
@@ -350,7 +373,7 @@ def main() -> int:
         "EVERGARDEN_ADMIN_CREDENTIAL_FILE": "/run/secrets/admin_credentials.json",
         "EVERGARDEN_ADMIN_SESSION_KEY_FILE": "/run/secrets/admin_session_key",
         "EVERGARDEN_ADMIN_SESSION_TTL_SECONDS": "604800",
-        "EVERGARDEN_ADMIN_LOGIN_MAX_FAILURES": "5",
+        "EVERGARDEN_ADMIN_LOGIN_MAX_FAILURES": "15",
         "EVERGARDEN_ADMIN_LOGIN_WINDOW_SECONDS": "900",
         "EVERGARDEN_ADMIN_SECURE_COOKIES": str(args.enable_human_web).lower(),
         "EVERGARDEN_APPROVAL_UI_ENABLED": str(args.enable_human_web).lower(),

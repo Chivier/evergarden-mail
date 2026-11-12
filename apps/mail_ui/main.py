@@ -14,6 +14,7 @@ import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field, SecretStr
 
@@ -37,6 +38,11 @@ from evergarden.mail.account_admin import (
 )
 from evergarden.mail.sync_notice import summarize_sync_incomplete
 from evergarden.mail.thunderbird_bridge import MAX_REQUEST_BYTES
+from evergarden.runtime_settings import (
+    RuntimeSettingsConflict,
+    RuntimeSettingsError,
+    RuntimeSettingsManager,
+)
 
 MAX_UI_REQUEST_BYTES = 8 * 1024 * 1024
 MAX_MCP_RESPONSE_BYTES = 8 * 1024 * 1024
@@ -61,6 +67,8 @@ MAIL_UI_ASSETS = {
     "styles.css": (ASSET_DIR / "styles.css", "text/css"),
     "feedback.js": (ASSET_DIR / "feedback.js", "text/javascript"),
     "feedback.css": (ASSET_DIR / "feedback.css", "text/css"),
+    "settings.js": (ASSET_DIR / "settings.js", "text/javascript"),
+    "settings.css": (ASSET_DIR / "settings.css", "text/css"),
     # Public: the login page needs the shared JSON helper, the i18n
     # runtime, its catalogues, styles and brand marks before a session exists.
     **SHARED_PUBLIC_ASSETS,
@@ -136,11 +144,23 @@ class AccountStateRequest(BaseModel):
     enabled: bool
 
 
+class RemoveAccountRequest(BaseModel):
+    expected_revision: str = Field(min_length=64, max_length=64)
+    confirmation: str = Field(min_length=1, max_length=64)
+
+
+class RuntimeSettingsRequest(BaseModel):
+    expected_revision: str = Field(min_length=64, max_length=64)
+    changes: dict[str, Any]
+    acknowledge_risk: bool = Field(default=False, strict=True)
+
+
 class CreateApiKeyRequest(BaseModel):
     expected_revision: str = Field(min_length=64, max_length=64)
     label: str = Field(min_length=1, max_length=48)
     scopes: list[str] = Field(min_length=1, max_length=32)
-    ttl_days: int = Field(ge=1, le=365)
+    ttl_days: int | None = Field(ge=1, le=365, strict=True)
+    acknowledge_no_expiry: bool = Field(default=False, strict=True)
 
 
 class RevokeApiKeyRequest(BaseModel):
@@ -294,6 +314,7 @@ def create_app(
     gateway: McpGateway | None = None,
     account_manager: AccountConfigManager | None = None,
     api_key_manager: ApiKeyManager | None = None,
+    runtime_settings_manager: RuntimeSettingsManager | None = None,
     admin_auth: AdminSessionAuth | None = None,
     login_throttle: LoginThrottle | None = None,
 ) -> FastAPI:
@@ -324,6 +345,8 @@ def create_app(
             if settings.account_config_file is None:
                 raise RuntimeError("account administration requires a private account config")
             account_manager = AccountConfigManager(settings.account_config_file)
+        if settings.mail_ui_account_admin_enabled and runtime_settings_manager is None:
+            runtime_settings_manager = RuntimeSettingsManager(settings)
         if settings.mail_ui_api_keys_enabled and api_key_manager is None:
             if settings.mcp_api_keys_file is None:
                 raise RuntimeError("API key issuance requires a private key registry path")
@@ -336,6 +359,13 @@ def create_app(
     app = FastAPI(title="Evergarden Mail Workbench", docs_url=None, redoc_url=None)
     login_slots = asyncio.Semaphore(LOGIN_CONCURRENCY)
     session_cookie = session_cookie_name(settings.admin_secure_cookies)
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request(_request: Request, _exc: RequestValidationError):
+        # Validation details can echo input, including pasted credentials.
+        return JSONResponse(
+            {"detail": "Invalid request. Check the fields and try again."}, status_code=422
+        )
 
     @app.middleware("http")
     async def security_boundary(request: Request, call_next):
@@ -536,10 +566,47 @@ def create_app(
         allowed = MAIL_UI_ASSETS
         if asset not in allowed:
             raise HTTPException(status_code=404, detail="asset not found")
-        if asset in {"app.js", "bridge.js", "feedback.js"}:
+        if asset in {"app.js", "bridge.js", "feedback.js", "settings.js"}:
             identity(request)
         path, media_type = allowed[asset]
         return FileResponse(path, media_type=media_type)
+
+    @app.get("/settings")
+    async def settings_page(request: Request):
+        try:
+            identity(request)
+        except HTTPException as exc:
+            if exc.status_code == 401:
+                return RedirectResponse(url="/login?next=%2Fsettings", status_code=303)
+            raise
+        return FileResponse(ASSET_DIR / "settings.html", media_type="text/html")
+
+    @app.get("/api/admin/settings")
+    def runtime_settings(request: Request):
+        identity(request)
+        if not settings.mail_ui_account_admin_enabled or runtime_settings_manager is None:
+            raise HTTPException(status_code=503, detail="settings administration is fenced off")
+        try:
+            return runtime_settings_manager.snapshot()
+        except RuntimeSettingsError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.patch("/api/admin/settings")
+    def update_runtime_settings(body: RuntimeSettingsRequest, request: Request):
+        current = identity(request)
+        require_csrf(request, current)
+        if not settings.mail_ui_account_admin_enabled or runtime_settings_manager is None:
+            raise HTTPException(status_code=503, detail="settings administration is fenced off")
+        try:
+            return runtime_settings_manager.update(
+                body.changes,
+                expected_revision=body.expected_revision,
+                acknowledge_risk=body.acknowledge_risk,
+            )
+        except RuntimeSettingsConflict as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except RuntimeSettingsError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/feedback")
     async def feedback_page(request: Request):
@@ -646,6 +713,36 @@ def create_app(
         except AccountAdminError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    @app.patch("/api/admin/accounts/{alias}")
+    def update_account(alias: str, body: AddAccountRequest, request: Request):
+        current = identity(request)
+        require_csrf(request, current)
+        if not settings.mail_ui_account_admin_enabled or account_manager is None:
+            raise HTTPException(status_code=503, detail="account administration is fenced off")
+        try:
+            return account_manager.update(
+                alias, body.account, expected_revision=body.expected_revision
+            )
+        except AccountConfigConflict as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except AccountAdminError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.delete("/api/admin/accounts/{alias}")
+    def remove_account(alias: str, body: RemoveAccountRequest, request: Request):
+        current = identity(request)
+        require_csrf(request, current)
+        if not settings.mail_ui_account_admin_enabled or account_manager is None:
+            raise HTTPException(status_code=503, detail="account administration is fenced off")
+        try:
+            return account_manager.remove(
+                alias, expected_revision=body.expected_revision, confirmation=body.confirmation
+            )
+        except AccountConfigConflict as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except AccountAdminError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     def require_api_keys() -> ApiKeyManager:
         if not settings.mail_ui_api_keys_enabled or api_key_manager is None:
             raise HTTPException(status_code=503, detail="API key issuance is fenced off")
@@ -670,6 +767,7 @@ def create_app(
                 label=body.label,
                 scopes=body.scopes,
                 ttl_days=body.ttl_days,
+                acknowledge_no_expiry=body.acknowledge_no_expiry,
                 expected_revision=body.expected_revision,
             )
         except ApiKeyConflict as exc:

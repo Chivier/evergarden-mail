@@ -24,6 +24,8 @@ def renew(run_root: Path, backup_dir: Path, *, days: int = 45) -> dict:
     if len(matches) != 1 or matches[0]["sha256"] != token_hash:
         raise ValueError("internal token does not match its registered grant")
     entry = matches[0]
+    if entry["expires_at"] is None:
+        return {"renewed": False, "expires_at": None}
     now = dt.datetime.now(dt.UTC)
     expiry = dt.datetime.fromisoformat(entry["expires_at"].replace("Z", "+00:00"))
     if expiry > now + dt.timedelta(days=7):

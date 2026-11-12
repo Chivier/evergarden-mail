@@ -72,8 +72,8 @@ EN / 中文 switch at the bottom of the sidebar changes the interface language.
 
 ## 4. Add a mailbox
 
-1. Click **+** next to **Mailboxes** in the sidebar ("Manage mailboxes").
-2. Expand **Add a mailbox** and fill in the form. For a password mailbox:
+1. Open **Settings → Mailboxes** (or click **+** next to **Mailboxes**).
+2. Click **Add a mailbox** and fill in the form. For a password mailbox:
 
    | Field | Example |
    |---|---|
@@ -88,20 +88,15 @@ EN / 中文 switch at the bottom of the sidebar changes the interface language.
    | Allowed move destinations | must include the Archive folder; never Trash or Junk |
 
    [providers.md](providers.md) lists the values for Gmail, iCloud and others.
-3. Click **Save private configuration**. The notice reads "Mailbox written to
-   the private configuration. Finish credentials or OAuth, then restart the
-   service."
+3. Click **Save mailbox**, then **Set app password** on the mailbox card.
+   Enter the provider's app password and save. It is encrypted on the server
+   and never read back. OAuth mailboxes use **Connect OAuth** after restarting.
 
-The form never accepts a password. Store it from the command line:
+You can also set a password through a hidden terminal prompt:
 
 ```bash
 docker compose exec approval-ui evergarden-provider-credential set-password --account personal
 ```
-
-Type the app password at the `App password:` prompt (nothing is echoed). The
-command answers `{"account": "personal", "credential_version": 1, "stored": true}`.
-To pipe it from a password manager instead, add `-T` after `exec` and pass the
-password on standard input.
 
 Then restart the services that read the mailbox list. This is needed after
 every mailbox change:
@@ -131,10 +126,11 @@ port), "authentication failed" (run the `set-password` command again, or
 reconnect OAuth), "the server did not answer in time" and a generic "the sync
 failed". **Technical detail** shows the provider's own error, for example
 `gaierror: [Errno -2] Name or service not known`. The notice stays until you
-close it. The web UI can add and disable mailboxes but
-not edit them, so fix a wrong host or folder in
-`.local/run/mail-config/mail_accounts.json` with a text editor. Then restart as
-above and sync again.
+close it. Open **Settings → Mailboxes → Edit** to correct a host, port or
+folder. Restart as above and sync again. The settings page also lets you add,
+enable, disable or remove a mailbox and replace its app password. Removal
+preserves synced mail, encrypted credentials and approval history.
+See [Web settings](settings.md) for runtime configuration and permanent API keys.
 
 After this the `scheduler` service syncs every mailbox once an hour, at minute
 03.

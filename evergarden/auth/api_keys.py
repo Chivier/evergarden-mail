@@ -79,7 +79,8 @@ class ApiKeyManager:
                     "scopes": list(entry.get("scopes", [])),
                     "created_at": entry.get("created_at", ""),
                     "expires_at": entry["expires_at"],
-                    "expired": dt.datetime.fromisoformat(
+                    "expired": entry["expires_at"] is not None
+                    and dt.datetime.fromisoformat(
                         str(entry["expires_at"]).replace("Z", "+00:00")
                     ).astimezone(dt.UTC)
                     <= now,
@@ -96,9 +97,9 @@ class ApiKeyManager:
     def _validate(self, label: object, scopes: object, ttl_days: object) -> tuple[str, list[str]]:
         if not isinstance(label, str) or not 1 <= len(label.strip()) <= MAX_LABEL_LENGTH:
             raise ApiKeyError("API key name must be 1-48 characters")
-        if not isinstance(ttl_days, int) or isinstance(ttl_days, bool):
+        if ttl_days is not None and (not isinstance(ttl_days, int) or isinstance(ttl_days, bool)):
             raise ApiKeyError("API key lifetime must be a whole number of days")
-        if not 1 <= ttl_days <= MAX_TTL_DAYS:
+        if ttl_days is not None and not 1 <= ttl_days <= MAX_TTL_DAYS:
             raise ApiKeyError(f"API key lifetime must be between 1 and {MAX_TTL_DAYS} days")
         known = set(supported_scopes())
         if (
@@ -116,8 +117,11 @@ class ApiKeyManager:
         scopes: object,
         ttl_days: object,
         expected_revision: str,
+        acknowledge_no_expiry: bool = False,
     ) -> dict[str, Any]:
         clean_label, clean_scopes = self._validate(label, scopes, ttl_days)
+        if ttl_days is None and acknowledge_no_expiry is not True:
+            raise ApiKeyError("a non-expiring API key requires explicit risk acknowledgement")
         with self.store.lock():
             value, entries = self._read()
             self._check_revision(expected_revision, value)
@@ -141,9 +145,9 @@ class ApiKeyManager:
                     "audience": [self.resource],
                     "scopes": clean_scopes,
                     "created_at": now.isoformat(timespec="seconds"),
-                    "expires_at": (now + dt.timedelta(days=int(ttl_days))).isoformat(
-                        timespec="seconds"
-                    ),
+                    "expires_at": None
+                    if ttl_days is None
+                    else (now + dt.timedelta(days=int(ttl_days))).isoformat(timespec="seconds"),
                 }
             )
             stored = self._write(entries)

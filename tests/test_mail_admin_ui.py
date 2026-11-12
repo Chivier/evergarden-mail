@@ -95,7 +95,7 @@ def test_private_account_manager_add_disable_enable_and_conflict(tmp_path: Path)
     assert load_account_configs(path) == ()
     assert load_account_configs(path, include_disabled=True)[0].enabled is False
     enabled = manager.set_enabled("work", enabled=True, expected_revision=disabled["revision"])
-    assert enabled["removal_semantics"].startswith("disable-only")
+    assert enabled["disable_semantics"].startswith("disable-only")
 
 
 def test_account_manager_rejects_symlink_and_unsafe_permissions(tmp_path: Path) -> None:

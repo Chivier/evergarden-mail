@@ -161,3 +161,22 @@ def test_preserved_env_ignores_missing_and_symlinked_files(tmp_path: Path) -> No
     link.symlink_to(target)
     assert materialize._preserved_env(link, set()) == {}
     assert materialize._preserved_env(target, {"B"}) == {"A": "1"}
+
+
+def test_materialized_defaults_match_setup_and_permanent_tokens_require_opt_in(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import datetime as dt
+
+    env = _materialize(tmp_path, monkeypatch, {})
+    assert env["EVERGARDEN_ADMIN_LOGIN_MAX_FAILURES"] == "15"
+    registry_path = tmp_path / ".local" / "run" / "compatibility_tokens.json"
+    entry = json.loads(registry_path.read_text())["tokens"][0]
+    expiry = dt.datetime.fromisoformat(entry["expires_at"])
+    assert 364 <= (expiry - dt.datetime.now(dt.UTC)).days <= 365
+    before = registry_path.read_bytes()
+    with pytest.raises(RuntimeError, match="acknowledge"):
+        _materialize(tmp_path, monkeypatch, {}, "--token-ttl-days", "0")
+    assert registry_path.read_bytes() == before
+    _materialize(tmp_path, monkeypatch, {}, "--token-ttl-days", "0", "--acknowledge-no-expiry")
+    assert json.loads(registry_path.read_text())["tokens"][0]["expires_at"] is None

@@ -378,15 +378,20 @@ class CompatibilityTokenVerifier:
                 or not all(isinstance(item, str) and item for item in scopes)
             ):
                 raise ValueError("compatibility token entry is malformed")
+            # Only an explicit null opts a compatibility key out of expiry.
+            # Missing and malformed expiry values must still fail closed.
+            never_expires = "expires_at" in entry and entry["expires_at"] is None
             try:
-                expires_at = dt.datetime.fromisoformat(
-                    str(entry["expires_at"]).replace("Z", "+00:00")
+                expires_at = (
+                    dt.datetime.fromisoformat(str(entry["expires_at"]).replace("Z", "+00:00"))
+                    if not never_expires
+                    else None
                 )
-                if expires_at.tzinfo is None:
+                if expires_at is not None and expires_at.tzinfo is None:
                     raise ValueError
             except (KeyError, ValueError) as exc:
                 raise ValueError("compatibility token expiry is malformed") from exc
-            if expires_at.astimezone(dt.UTC) > horizon:
+            if expires_at is not None and expires_at.astimezone(dt.UTC) > horizon:
                 raise ValueError("compatibility token expiry exceeds the permitted horizon")
             if digest in hashes or client_id in clients:
                 raise ValueError("compatibility token registry contains duplicate identities")
@@ -406,8 +411,13 @@ class CompatibilityTokenVerifier:
             expected = str(entry.get("sha256") or "")
             if not expected or not hmac.compare_digest(presented, expected):
                 continue
-            expires_at = dt.datetime.fromisoformat(str(entry["expires_at"]).replace("Z", "+00:00"))
-            if expires_at.astimezone(dt.UTC) <= now:
+            expiry = entry["expires_at"]
+            expires_at = (
+                dt.datetime.fromisoformat(str(expiry).replace("Z", "+00:00"))
+                if expiry is not None
+                else None
+            )
+            if expires_at is not None and expires_at.astimezone(dt.UTC) <= now:
                 raise InvalidToken("compatibility token is expired")
             principal = Principal.build(
                 subject=str(entry["subject"]),

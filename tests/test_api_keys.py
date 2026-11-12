@@ -208,3 +208,45 @@ def test_registry_refuses_a_symlinked_path(tmp_path: Path) -> None:
     manager = ApiKeyManager(link, resource=RESOURCE, mode="read-only")
     with pytest.raises(ApiKeyError, match="symlink"):
         manager.snapshot()
+
+
+@pytest.mark.asyncio
+async def test_non_expiring_key_verifies_and_revocation_still_reloads(tmp_path: Path) -> None:
+    manager = _manager(tmp_path)
+    with pytest.raises(ApiKeyError, match="acknowledgement"):
+        manager.create(
+            label="permanent",
+            scopes=["mail:read"],
+            ttl_days=None,
+            expected_revision=manager.snapshot()["revision"],
+        )
+    issued = manager.create(
+        label="permanent",
+        scopes=["mail:read"],
+        ttl_days=None,
+        acknowledge_no_expiry=True,
+        expected_revision=manager.snapshot()["revision"],
+    )
+    assert issued["keys"][0]["expires_at"] is None
+    assert issued["keys"][0]["expired"] is False
+    verifier = CompatibilityTokenVerifier(
+        manager.path, resource=RESOURCE, issuer=ISSUER, reload=True
+    )
+    assert (await verifier.verify(issued["token"])).client_id == issued["client_id"]
+    manager.revoke(issued["client_id"], expected_revision=issued["revision"])
+    with pytest.raises(InvalidToken):
+        await verifier.verify(issued["token"])
+
+
+@pytest.mark.parametrize("expiry", ["missing", "", "never", False])
+def test_only_explicit_null_allows_a_key_without_expiry(tmp_path: Path, expiry: object) -> None:
+    manager = _manager(tmp_path)
+    _issue(manager, "one", ["mail:read"])
+    registry = json.loads(manager.path.read_text())
+    if expiry == "missing":
+        registry["tokens"][0].pop("expires_at")
+    else:
+        registry["tokens"][0]["expires_at"] = expiry
+    manager.path.write_text(json.dumps(registry))
+    with pytest.raises(ValueError, match="expiry"):
+        CompatibilityTokenVerifier(manager.path, resource=RESOURCE, issuer=ISSUER)

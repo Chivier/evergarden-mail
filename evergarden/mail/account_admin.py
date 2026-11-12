@@ -30,7 +30,7 @@ class AccountConfigConflict(AccountAdminError):
 class AccountConfigManager:
     """Atomically manage the private, token-free mailbox inventory.
 
-    A user-facing "remove" disables an entry and preserves its configuration.
+    Disable preserves an entry; remove only removes its configuration.
     No credential record, archive, or provider message is deleted here.
     """
 
@@ -62,6 +62,7 @@ class AccountConfigManager:
             "revision": _revision(value),
             "accounts": [
                 {
+                    **account_config_payload((account,))["accounts"][0],
                     "alias": account.alias,
                     "address": account.address,
                     "default_from": account.default_from_address,
@@ -79,7 +80,8 @@ class AccountConfigManager:
                 for account in accounts
             ],
             "restart_required_after_change": True,
-            "removal_semantics": "disable-only; credentials and archived mail are preserved",
+            "disable_semantics": "disable-only; credentials and archived mail are preserved",
+            "removal_semantics": "configuration-only; credentials, archived mail and approvals are preserved",
         }
 
     def snapshot(self) -> dict[str, Any]:
@@ -120,6 +122,39 @@ class AccountConfigManager:
                 dataclasses.replace(account, enabled=enabled) if account.alias == alias else account
                 for account in accounts
             )
+            stored = self._write(updated)
+            return self._public(stored, updated)
+
+    def update(self, alias: str, changes: object, *, expected_revision: str) -> dict[str, Any]:
+        with self._lock():
+            value, accounts = self._read()
+            self._check_revision(expected_revision, value)
+            if not isinstance(changes, dict) or changes.get("alias", alias) != alias:
+                raise AccountAdminError("account alias cannot be changed")
+            if alias not in {account.alias for account in accounts}:
+                raise AccountAdminError("account is unknown")
+            payload = account_config_payload(accounts)
+            for account in payload["accounts"]:
+                if account["alias"] == alias:
+                    account.update(changes)
+            try:
+                updated = parse_account_config_payload(payload, include_disabled=True)
+            except AccountConfigError as exc:
+                raise AccountAdminError(
+                    "updated account configuration is malformed or duplicated"
+                ) from exc
+            stored = self._write(updated)
+            return self._public(stored, updated)
+
+    def remove(self, alias: str, *, expected_revision: str, confirmation: str) -> dict[str, Any]:
+        if not alias or confirmation != alias:
+            raise AccountAdminError("confirm removal with the account alias")
+        with self._lock():
+            value, accounts = self._read()
+            self._check_revision(expected_revision, value)
+            updated = tuple(account for account in accounts if account.alias != alias)
+            if len(updated) == len(accounts):
+                raise AccountAdminError("account is unknown")
             stored = self._write(updated)
             return self._public(stored, updated)
 

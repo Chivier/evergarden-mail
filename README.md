@@ -99,6 +99,7 @@ The threat model, container isolation and known trade-offs are in
 
 | | |
 |---|---|
+| [Web settings](docs/settings.md) | Mailbox editing, runtime configuration and API keys |
 | [Quickstart](docs/quickstart.md) | Install, first mailbox, first agent, first approval |
 | [User guide](docs/user-guide.md) | Workbench and approval pages |
 | [Providers](docs/providers.md) | IMAP, Gmail, iCloud, Microsoft; mailbox fields |

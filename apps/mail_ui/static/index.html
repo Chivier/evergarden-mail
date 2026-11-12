@@ -40,6 +40,7 @@
           <button id="verificationButton" class="nav-item" type="button"><span data-i18n="mail.nav.codes">Find verification codes</span></button>
           <button id="preferencesButton" class="nav-item" type="button"><span data-i18n="mail.nav.preferences">Global notes and preferences</span></button>
           <button id="mcpGuideButton" class="nav-item" type="button"><span data-i18n="mail.nav.mcp">Connect an MCP agent</span></button>
+          <a class="nav-item" href="/settings" data-i18n="settings.title">Settings</a>
           <div class="sidebar-lang" data-lang-switch></div>
           <div class="identity-row"><div id="identity" class="identity" data-i18n-once="mail.identity.checking">Checking your session…</div><button id="logoutButton" class="text-button" type="button" title="Sign out on all devices and browsers" data-i18n="mail.logout" data-i18n-title="mail.logoutTitle">Sign out</button></div>
         </div>
@@ -224,8 +225,10 @@
               <option value="30" data-i18n="mcp.ttl30">30 days</option>
               <option value="90" selected data-i18n="mcp.ttl90">90 days</option>
               <option value="365" data-i18n="mcp.ttl365">365 days</option>
+              <option value="never" data-i18n="mcp.ttlNever">Never expires</option>
             </select></label>
           </div>
+          <label id="apiKeyNoExpiryRisk" class="safety-copy check-label" hidden><input id="apiKeyNoExpiryAck" type="checkbox"><span data-i18n="mcp.noExpiryRisk">I understand that a leaked token allows continued access until I revoke it. I will store it securely and revoke it when no longer needed.</span></label>
           <details>
             <summary data-i18n="mcp.pickScopes">Choose scopes one by one</summary>
             <div id="apiKeyScopes" class="mcp-scope-grid"></div>

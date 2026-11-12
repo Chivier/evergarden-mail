@@ -88,6 +88,26 @@ class PrivateJsonStore:
             raise self._fail("is malformed")
         return value
 
+    @contextlib.contextmanager
+    def read_lock(self):
+        """Join an existing writer lock through a read-only directory mount.
+
+        A snapshot from the writer creates the lock before providing a revision.
+        Refuse if it is missing rather than racing a configuration change.
+        """
+        try:
+            descriptor = os.open(self.lock_path, os.O_RDONLY | os.O_NOFOLLOW)
+        except OSError as exc:
+            raise self._fail("lock is unavailable; reload the inventory") from exc
+        try:
+            info = os.fstat(descriptor)
+            if not stat.S_ISREG(info.st_mode) or info.st_mode & 0o077:
+                raise self._fail("lock must be a regular mode-0600 file")
+            fcntl.flock(descriptor, fcntl.LOCK_SH)
+            yield
+        finally:
+            os.close(descriptor)
+
     def write_json(self, value: dict[str, Any]) -> dict[str, Any]:
         payload = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
         descriptor, temporary = tempfile.mkstemp(

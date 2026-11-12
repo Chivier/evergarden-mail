@@ -397,4 +397,9 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    if settings.account_config_file is not None:
+        from evergarden.runtime_settings import RuntimeSettingsManager
+
+        return RuntimeSettingsManager(settings).configured()
+    return settings

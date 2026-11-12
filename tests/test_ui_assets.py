@@ -18,7 +18,7 @@ from evergarden.auth.admin_session import SESSION_COOKIE, AdminSessionAuth, cred
 from evergarden.config import Settings
 
 ROOT = Path(__file__).resolve().parents[1]
-MAIL_PAGES = ["index.html", "login.html", "feedback.html"]
+MAIL_PAGES = ["index.html", "login.html", "feedback.html", "settings.html"]
 APPROVAL_PAGES = ["review.html", "send.html", "oauth.html"]
 REQUIRED = [
     "/assets/i18n.js",
