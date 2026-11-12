@@ -1,0 +1,13 @@
+# Fires at the minutes config/jobs.yaml schedules (archive-sync at :03,
+# oauth-watchdog at :05). If you change the job schedules, change OnCalendar.
+[Unit]
+Description=Run the Evergarden due-job dispatcher
+
+[Timer]
+OnCalendar=*-*-* *:03,05:00
+AccuracySec=1s
+Persistent=true
+Unit=evergarden-production-dispatch.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,143 @@
+/* Evergarden design tokens, shared by the mail workbench, the approval UI and
+   the feedback page. Light values first; dark values follow the system
+   preference. Every page stylesheet uses these variables instead of raw colours. */
+:root {
+  color-scheme: light dark;
+
+  /* Type */
+  --font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --font-serif: Georgia, "Iowan Old Style", "Times New Roman", "Songti SC", "Noto Serif CJK SC", serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-base: 15px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 26px;
+  --text-3xl: 30px;
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 12px;
+  --radius-xl: 18px;
+  --radius-pill: 999px;
+
+  /* Colour: surfaces and text */
+  --color-bg: #f5f8f5;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f5f8f5;
+  --color-surface-sunken: #eef3ef;
+  --color-sidebar: #f0f4f0;
+  --color-field: #fcfdfc;
+  --color-border: #dbe4de;
+  --color-border-strong: #c3d2c8;
+  --color-divider: #ebf0ec;
+  --color-text: #17211c;
+  --color-text-secondary: #46544c;
+  --color-text-muted: #5a6760;
+  --color-hover: #eef4f0;
+  --color-selected: #e2ece5;
+
+  /* Colour: brand */
+  --color-accent: #2c6851;
+  --color-accent-hover: #235842;
+  --color-accent-border: #25593f;
+  --color-accent-text: #2c6851;
+  --color-accent-strong: #1e4e3c;
+  --color-accent-soft: #e5f0e9;
+  --color-on-accent: #ffffff;
+  --color-accent-disabled: #a9c0b3;
+
+  /* Colour: status */
+  --color-ok: #1f5c40;
+  --color-ok-soft: #e3f1e8;
+  --color-ok-border: #c7e0d0;
+  --color-warn: #6f4a14;
+  --color-warn-soft: #fbf3e7;
+  --color-warn-border: #c9995a;
+  --color-danger: #943434;
+  --color-danger-soft: #fbecea;
+  --color-danger-border: #ebcdc9;
+  --color-danger-strong: #b44c43;
+  --color-info: #553a92;
+  --color-info-soft: #efe8fb;
+  --color-info-border: #dcd0f3;
+  --color-neutral: #545f5a;
+  --color-neutral-soft: #eef1ef;
+  --color-neutral-border: #dde3df;
+
+  /* Elevation and focus */
+  --shadow-sm: 0 1px 2px rgba(20, 48, 35, 0.08);
+  --shadow-md: 0 8px 24px rgba(26, 52, 38, 0.12);
+  --shadow-lg: 0 20px 60px rgba(26, 52, 38, 0.16);
+  --backdrop: rgba(18, 32, 25, 0.48);
+  --focus-color: #2f7a5c;
+  --focus-ring: 2px solid var(--focus-color);
+  --focus-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #111513;
+    --color-surface: #191e1b;
+    --color-surface-muted: #1d2320;
+    --color-surface-sunken: #151a17;
+    --color-sidebar: #151a17;
+    --color-field: #141815;
+    --color-border: #2d3731;
+    --color-border-strong: #3e4b43;
+    --color-divider: #242c27;
+    --color-text: #e3eae5;
+    --color-text-secondary: #bcc8c1;
+    --color-text-muted: #9eaca4;
+    --color-hover: #222a25;
+    --color-selected: #263630;
+
+    --color-accent: #2f7558;
+    --color-accent-hover: #37876a;
+    --color-accent-border: #3f8a69;
+    --color-accent-text: #82cfaa;
+    --color-accent-strong: #a8dfc4;
+    --color-accent-soft: #1d3329;
+    --color-on-accent: #ffffff;
+    --color-accent-disabled: #34483e;
+
+    --color-ok: #8fd4ae;
+    --color-ok-soft: #1b3326;
+    --color-ok-border: #2d5641;
+    --color-warn: #e8c084;
+    --color-warn-soft: #33291a;
+    --color-warn-border: #8f6c39;
+    --color-danger: #f0a39b;
+    --color-danger-soft: #3a201e;
+    --color-danger-border: #5f3430;
+    --color-danger-strong: #b44c43;
+    --color-info: #c8b6f2;
+    --color-info-soft: #2a2340;
+    --color-info-border: #463c68;
+    --color-neutral: #b3bfb8;
+    --color-neutral-soft: #232a26;
+    --color-neutral-border: #36403a;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.55);
+    --backdrop: rgba(4, 8, 6, 0.66);
+    --focus-color: #82cfaa;
+  }
+}

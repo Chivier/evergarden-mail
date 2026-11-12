@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title data-i18n="approvals.pageTitle">Approvals · Evergarden</title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/assets/tokens.css">
+    <link rel="stylesheet" href="/assets/components.css">
+    <link rel="stylesheet" href="/assets/approval.css">
+    <script src="/assets/i18n.js" defer></script>
+    <script src="/assets/locale-en.js" defer></script>
+    <script src="/assets/locale-zh-CN.js" defer></script>
+    <script src="/assets/ui.js" defer></script>
+    <script src="/assets/http.js" defer></script>
+    <script src="/assets/review.js" defer></script>
+  </head>
+  <body class="app">
+    <div class="shell">
+      <header class="topbar">
+        <a id="homeLink" class="brand" href="/review#pending"><img class="eg-logo" src="/assets/logo.svg" alt="" width="30" height="30"><h1><span class="brand-name">Evergarden</span> <span data-i18n="approvals.title">Approvals</span></h1></a>
+        <span id="identity" class="identity" data-i18n-once="approvals.identity.checking">Checking reviewer session…</span>
+        <span class="spacer"></span>
+        <span id="dispatchPill" class="pill pill-muted dispatch-pill" data-i18n-once="approvals.dispatch.loading">Reading auto-run status…</span>
+        <div class="topbar-lang" data-lang-switch></div>
+      </header>
+
+      <nav id="tabs" class="tabs" role="tablist" aria-label="Approval views" data-i18n-aria-label="approvals.tabs.label" hidden>
+        <button id="tabPending" class="tab" type="button" role="tab" aria-controls="pendingPanel" aria-selected="true"><span data-i18n="approvals.tabs.pending">Pending</span><span id="pendingCount" class="tab-count"> (—)</span></button>
+        <button id="tabExecution" class="tab" type="button" role="tab" aria-controls="executionPanel" aria-selected="false" tabindex="-1"><span data-i18n="approvals.tabs.execution">Execution log</span><span id="executionCount" class="tab-count"> (—)</span></button>
+      </nav>
+      <p id="activityBar" class="activity-bar" role="status" hidden></p>
+
+      <section id="pendingPanel" class="panel" role="tabpanel" aria-labelledby="tabPending" hidden>
+        <div class="toolbar">
+          <button id="selectAllPages" class="secondary small" type="button" data-i18n="approvals.selectAllPages">Select all pending</button>
+          <span id="selectionCount" class="muted" role="status"></span>
+          <span class="spacer"></span>
+          <label class="inline-field"><span data-i18n="approvals.perPage">Per page</span> <select id="pageSize"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select></label>
+          <button id="refreshBatch" class="secondary small" type="button" data-i18n="common.refresh">Refresh</button>
+          <div class="pager"><span id="pageInfo" aria-live="polite">—</span><button id="previousPage" class="secondary icon" type="button" aria-label="Previous page" data-i18n-aria-label="common.previousPage">‹</button><button id="nextPage" class="secondary icon" type="button" aria-label="Next page" data-i18n-aria-label="common.nextPage">›</button></div>
+        </div>
+        <p id="pendingError" class="inline-alert" role="alert" hidden></p>
+        <div id="pendingRegion" class="table-region">
+          <table class="data-table pending-table">
+            <thead><tr><th class="check-col"><input id="selectAll" type="checkbox" aria-label="Select this page" data-i18n-aria-label="approvals.selectPage"></th><th data-i18n="approvals.col.mail">Message</th><th class="account-col" data-i18n="approvals.col.mailbox">Mailbox</th><th class="folder-col" data-i18n="approvals.col.folder">Source folder</th><th class="expiry-col" data-i18n="approvals.col.expiry">Time left</th><th class="action-col" data-i18n="approvals.col.details">Details</th></tr></thead>
+            <tbody id="batchItems"></tbody>
+          </table>
+          <p id="pendingEmpty" class="table-state" hidden></p>
+        </div>
+        <section id="otherPending" class="other-pending" hidden aria-labelledby="otherPendingTitle">
+          <div class="other-pending-head">
+            <h2 id="otherPendingTitle" data-i18n="approvals.other.title">Other pending operations</h2>
+            <p class="muted" data-i18n="approvals.other.copy">Check and approve archive, mark and similar operations one by one. Operations returned after a failure also appear here.</p>
+          </div>
+          <div class="table-region other-region">
+            <table class="data-table">
+              <thead><tr><th data-i18n="approvals.col.mail">Message</th><th class="kind-col" data-i18n="approvals.col.operation">Operation</th><th class="account-col" data-i18n="approvals.col.mailbox">Mailbox</th><th class="ops-col" data-i18n="approvals.col.approval">Approval</th></tr></thead>
+              <tbody id="otherPendingItems"></tbody>
+            </table>
+          </div>
+          <p id="otherPendingMore" class="muted" hidden data-i18n="approvals.other.more">More operations are waiting; see Execution log → Pending.</p>
+        </section>
+        <footer class="actionbar">
+          <span id="batchHint" class="muted small-text" data-i18n="approvals.batchHint">Tick messages and approve; mail moved to Deleted Items can still be recovered.</span>
+          <span id="batchBlocked" class="blocked-reason" hidden></span>
+          <span class="spacer"></span>
+          <button id="approveBatch" type="button" disabled></button>
+        </footer>
+      </section>
+
+      <section id="executionPanel" class="panel" role="tabpanel" aria-labelledby="tabExecution" hidden>
+        <div class="chips" role="group" aria-label="Filter by execution status" data-i18n-aria-label="approvals.chips.label">
+          <button id="chip-all" class="chip" type="button" aria-pressed="true"><span data-i18n="approvals.chip.all">All</span><b id="count-all"></b></button>
+          <button id="chip-pending" class="chip" type="button" aria-pressed="false"><span data-i18n="phase.pending">Pending</span><b id="count-pending"></b></button>
+          <button id="chip-running" class="chip" type="button" aria-pressed="false"><span data-i18n="phase.running">Running</span><b id="count-running"></b></button>
+          <button id="chip-confirmed" class="chip" type="button" aria-pressed="false"><span data-i18n="phase.confirmed">Succeeded</span><b id="count-confirmed"></b></button>
+          <button id="chip-failed" class="chip" type="button" aria-pressed="false"><span data-i18n="phase.failed">Failed</span><b id="count-failed"></b></button>
+        </div>
+        <div class="toolbar">
+          <span class="spacer"></span>
+          <span id="queueInfo" class="queue-info" hidden></span>
+          <span id="executionUpdated" class="muted small-text"></span>
+          <button id="refreshExecution" class="secondary small" type="button" data-i18n="common.refresh">Refresh</button>
+          <div class="pager"><span id="executionPageInfo" aria-live="polite">—</span><button id="previousExecution" class="secondary icon" type="button" aria-label="Previous page" data-i18n-aria-label="common.previousPage">‹</button><button id="nextExecution" class="secondary icon" type="button" aria-label="Next page" data-i18n-aria-label="common.nextPage">›</button></div>
+        </div>
+        <p id="executionError" class="inline-alert" role="alert" hidden></p>
+        <div id="executionRegion" class="table-region">
+          <table class="data-table execution-table">
+            <thead><tr><th data-i18n="approvals.col.mail">Message</th><th class="kind-col" data-i18n="approvals.col.kind">Type</th><th class="account-col" data-i18n="approvals.col.mailbox">Mailbox</th><th class="source-col" data-i18n="approvals.col.source">By</th><th class="status-col" data-i18n="approvals.col.status">Status</th><th class="time-col" data-i18n="approvals.col.time">Time</th><th class="ops-col" data-i18n="approvals.col.actions">Actions</th></tr></thead>
+            <tbody id="executionItems"></tbody>
+          </table>
+          <p id="executionEmpty" class="table-state" hidden></p>
+        </div>
+      </section>
+
+      <section id="single" class="single" aria-label="Single approval" data-i18n-aria-label="approvals.single.label" hidden>
+        <div class="single-main">
+          <div class="summary">
+            <div><span data-i18n="approvals.col.kind">Type</span><strong id="kind">—</strong></div>
+            <div><span data-i18n="approvals.expiry">Valid until</span><strong id="expiry">—</strong></div>
+            <div><span data-i18n="approvals.col.status">Status</span><strong id="status">—</strong></div>
+          </div>
+          <article id="mailPreview" class="mail-preview review-mail" aria-label="Full message" data-i18n-aria-label="approvals.mail.label">
+            <h2 id="mailSubject" data-i18n-once="approvals.mail.loading">Reading the full message…</h2>
+            <dl id="mailEnvelope" class="mail-envelope"></dl>
+            <p id="mailNotice" class="mail-notice" hidden></p>
+            <div id="mailBody" class="mail-body" dir="auto"></div>
+          </article>
+          <details class="packet-details"><summary data-i18n="approvals.packet.show">Show full approval data</summary><pre id="packet" class="packet single-packet" data-i18n-once="approvals.packet.loading">Reading the immutable approval request…</pre></details>
+        </div>
+        <aside class="single-side" aria-label="Approval actions" data-i18n-aria-label="approvals.single.actions">
+          <div id="warning" class="warning"></div>
+          <p id="singleBlocked" class="blocked-reason" hidden></p>
+          <button id="approve" type="button" disabled data-i18n="approvals.approve">Approve</button>
+          <p id="singleNote" class="single-note" hidden></p>
+          <p id="executionState" class="execution-state" role="status"></p>
+          <button id="revokeSingle" class="secondary" type="button" hidden data-i18n="approvals.revokeApproval">Revoke approval</button>
+          <a class="back-link" href="/review#pending" data-i18n="approvals.backToList">← Back to approvals</a>
+        </aside>
+      </section>
+    </div>
+
+    <dialog id="drawer" class="drawer" aria-labelledby="drawerTitle" hidden>
+      <header class="drawer-head">
+        <h2 id="drawerTitle" data-i18n-once="approvals.drawer.title">Approval details</h2>
+        <button id="drawerClose" class="secondary icon" type="button" aria-label="Close details" data-i18n-aria-label="approvals.drawer.close">×</button>
+      </header>
+      <div class="drawer-scroll">
+        <dl id="drawerMeta" class="drawer-meta"></dl>
+        <div class="drawer-actions">
+          <button id="drawerApprove" type="button" hidden data-i18n-once="approvals.approve">Approve</button>
+          <a id="drawerSingleLink" class="drawer-link" href="/review" data-i18n="approvals.drawer.openPage">Open on its own page</a>
+        </div>
+        <article id="drawerMail" class="mail-preview drawer-mail" aria-label="Full message" data-i18n-aria-label="approvals.mail.label">
+          <dl id="drawerMailEnvelope" class="mail-envelope"></dl>
+          <p id="drawerMailNotice" class="mail-notice" hidden></p>
+          <div id="drawerMailBody" class="mail-body" dir="auto"></div>
+        </article>
+        <details class="packet-details"><summary data-i18n="approvals.packet.show">Show full approval data</summary><pre id="drawerPacket" class="packet drawer-packet"></pre></details>
+      </div>
+    </dialog>
+
+    <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+  </body>
+</html>

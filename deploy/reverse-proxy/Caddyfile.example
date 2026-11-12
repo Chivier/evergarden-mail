@@ -1,0 +1,39 @@
+# Caddy in front of Evergarden on the same host. Caddy obtains and renews the
+# TLS certificate. Replace mail.example.com with your domain, then run
+#   ./deploy/setup --public-origin https://mail.example.com
+# (or set the origin in .local/run/runtime.env; see README).
+#
+# The gateway publishes 127.0.0.1:8788 by default (EVERGARDEN_HTTP_PORT).
+# Evergarden authenticates every request itself; do not add basic auth or
+# forward-auth here, and never forward caller-supplied identity headers.
+
+mail.example.com {
+	encode zstd gzip
+
+	# Long-lived MCP streams must not be buffered.
+	@mcp path /mcp /mcp/*
+	reverse_proxy @mcp 127.0.0.1:8788 {
+		flush_interval -1
+		header_up -Remote-User
+		header_up -Remote-Groups
+		header_up -Remote-Email
+		header_up -Remote-Name
+		header_up -X-Evergarden-Proxy-Secret
+		transport http {
+			read_timeout 1h
+			write_timeout 1h
+		}
+	}
+
+	reverse_proxy 127.0.0.1:8788 {
+		header_up -Remote-User
+		header_up -Remote-Groups
+		header_up -Remote-Email
+		header_up -Remote-Name
+		header_up -X-Evergarden-Proxy-Secret
+		transport http {
+			read_timeout 6m
+			write_timeout 6m
+		}
+	}
+}

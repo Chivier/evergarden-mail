@@ -1,0 +1,76 @@
+# Nginx Proxy Manager Advanced configuration for an Evergarden mail host.
+# Requires the gateway on NPM's Docker network: add compose.proxy.yaml to
+# COMPOSE_FILE (see .env.example) so NPM reaches it as evergarden-gateway:8080.
+# Caddy and plain nginx examples are in deploy/reverse-proxy/.
+# Set EVERGARDEN_GATEWAY_REAL_IP=proxy in .env (cloudflare when Cloudflare
+# proxies this host; NPM passes CF-Connecting-IP through unchanged) and
+# EVERGARDEN_GATEWAY_TRUSTED_PROXIES to NPM's Docker network subnet, so the
+# gateway resolves each visitor from the X-Forwarded-For set below.
+# NPM resolves evergarden-gateway when it loads its configuration. After the
+# gateway container is recreated (upgrades, `docker compose up` with changes),
+# reload NPM (`docker exec <npm-container> nginx -s reload`) or it answers 502.
+# NPM owns only DNS/TLS/reverse proxying. Browser login is implemented by
+# Evergarden itself; this host must not use an Authelia access list or
+# auth_request. Caller-supplied legacy identity headers are always discarded.
+
+# MCP performs independent bearer-token validation and never enters the
+# administrator browser-session flow.
+location = /.well-known/oauth-protected-resource {
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header Remote-User "";
+    proxy_set_header Remote-Groups "";
+    proxy_set_header Remote-Email "";
+    proxy_set_header Remote-Name "";
+    proxy_set_header X-Evergarden-Proxy-Secret "";
+    proxy_pass http://evergarden-gateway:8080;
+}
+
+location = /.well-known/oauth-protected-resource/mcp {
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header Remote-User "";
+    proxy_set_header Remote-Groups "";
+    proxy_set_header Remote-Email "";
+    proxy_set_header Remote-Name "";
+    proxy_set_header X-Evergarden-Proxy-Secret "";
+    proxy_pass http://evergarden-gateway:8080;
+}
+
+location ^~ /mcp {
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header Remote-User "";
+    proxy_set_header Remote-Groups "";
+    proxy_set_header Remote-Email "";
+    proxy_set_header Remote-Name "";
+    proxy_set_header X-Evergarden-Proxy-Secret "";
+    proxy_request_buffering off;
+    proxy_buffering off;
+    proxy_read_timeout 3600;
+    proxy_send_timeout 3600;
+    proxy_pass http://evergarden-gateway:8080;
+}
+
+location / {
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header Remote-User "";
+    proxy_set_header Remote-Groups "";
+    proxy_set_header Remote-Email "";
+    proxy_set_header Remote-Name "";
+    proxy_set_header X-Evergarden-Proxy-Secret "";
+    proxy_http_version 1.1;
+    proxy_read_timeout 360;
+    proxy_send_timeout 360;
+    proxy_connect_timeout 30;
+    proxy_pass http://evergarden-gateway:8080;
+}

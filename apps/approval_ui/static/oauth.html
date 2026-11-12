@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title data-i18n="oauth.pageTitle">Connect mailbox · Evergarden</title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/assets/tokens.css">
+    <link rel="stylesheet" href="/assets/components.css">
+    <link rel="stylesheet" href="/assets/approval.css">
+    <script src="/assets/i18n.js" defer></script>
+    <script src="/assets/locale-en.js" defer></script>
+    <script src="/assets/locale-zh-CN.js" defer></script>
+    <script src="/assets/http.js" defer></script>
+    <script src="/assets/oauth.js" defer></script>
+  </head>
+  <body class="page">
+    <header class="eg-topbar">
+      <a class="eg-brand" href="/review#pending"><img class="eg-logo" src="/assets/logo.svg" alt="" width="30" height="30"><span>Evergarden</span></a>
+      <span class="eg-topbar-title" data-i18n="oauth.eyebrow">Mailbox connection</span>
+      <span id="identity" class="identity eg-identity" data-i18n-live="oauth.identity.checking">Checking administrator session…</span>
+      <span class="eg-spacer"></span>
+      <div data-lang-switch></div>
+    </header>
+    <main class="card narrow">
+      <h1 data-i18n="oauth.title">Connect a mailbox</h1>
+      <div class="warning" data-i18n="oauth.warning">Sign in and complete two-step verification on Google's or Microsoft's own page to let Evergarden connect the selected mailbox.</div>
+      <label><span data-i18n="oauth.account">Mailbox</span><select id="account"></select></label>
+      <button id="start" type="button" disabled data-i18n-live="oauth.loading">Loading mailboxes…</button>
+      <section id="device" class="device-card" hidden>
+        <p data-i18n="oauth.enterCodeLabel">Enter this code on the Microsoft page:</p>
+        <p class="device-code"><code id="device-code"></code></p>
+        <p><a id="device-link" class="button-link secondary" target="_blank" rel="noopener noreferrer" data-i18n="oauth.openMicrosoft">Open Microsoft sign-in</a></p>
+        <p id="device-app" class="muted" hidden></p>
+        <p class="muted" data-i18n="oauth.deviceNote">Pick the matching mailbox and finish sign-in and MFA. Microsoft's page shows the name of the app registration this service is configured with. Once you are done the mailbox connects and syncs in the background, and you can close this page.</p>
+      </section>
+      <p id="result" class="result" role="status"></p>
+    </main>
+  </body>
+</html>

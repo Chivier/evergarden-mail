@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title data-i18n="title">Evergarden bridge</title>
+<body><h1 data-i18n="heading">Evergarden mail bridge</h1>
+<p data-i18n="intro">First sign in to the company Google mailbox in Thunderbird. Download the pairing file from the Evergarden workbench, then import it here. No Google Cloud app is needed.</p>
+<p data-i18n="scope">The bridge only receives Inbox mail. The first run backfills the last 7 days, and mail from before pairing does not trigger new-mail alerts. Keep Thunderbird running; mail and the upload queue stay on this machine and in Evergarden.</p>
+<label><span data-i18n="import">Import pairing file</span> <input id="config" type="file" accept="application/json,.json"></label>
+<button id="sync" data-i18n="sync">Retry now / backfill</button><pre id="status" role="status"></pre>
+<p data-i18n="limits">Each message is limited to 16 MiB; read larger ones in Thunderbird. After more than 7 days offline, check for missing mail by hand.</p>
+<script src="options.js"></script></body></html>

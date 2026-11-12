@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Third-party actions are pinned to full commit SHAs (tag in the comment);
+# Dependabot (github-actions ecosystem) proposes updates.
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+jobs:
+  lint:
+    name: Lint and frontend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - run: uv sync --frozen --all-groups
+      - run: uv run --frozen ruff check .
+      - run: uv run --frozen ruff format --check .
+      - run: node --check apps/mail_ui/static/app.js
+      - run: node --test tests/frontend/*.test.js
+
+  tests:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.14"]
+    services:
+      postgres:
+        image: postgres:17.6-bookworm
+        env:
+          POSTGRES_PASSWORD: evergarden-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:evergarden-test-only@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python }}
+      - run: uv sync --frozen --all-groups
+      - run: uv run --frozen coverage run -m pytest -q
+      - run: uv run --frozen coverage report
+
+  privacy:
+    name: Privacy and secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks ${{ env.GITLEAKS_VERSION }}
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSLo "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP/bin" gitleaks
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      # Both scanners use only the Python standard library.
+      - name: Tree privacy scan
+        run: python3 deploy/scripts/check_repo_privacy.py
+      - name: Tree secret scan
+        run: python3 deploy/scripts/check_repo_secrets.py
+      - name: History secret scan
+        run: gitleaks git --config .gitleaks.toml --no-banner --redact .
+
+  compose:
+    name: Compose config and image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Stand in for the runtime.env that ./deploy/setup writes
+        run: mkdir -p .local/run && touch .local/run/runtime.env
+      - name: Render the base stack with defaults
+        run: docker compose --env-file /dev/null -f docker-compose.yaml --profile '*' config --quiet
+      - name: Render with the example settings and the proxy overlay
+        run: >-
+          docker compose --env-file .env.example -f docker-compose.yaml -f compose.proxy.yaml
+          --profile '*' config --quiet
+      - name: Render each gateway real-IP mode; an unknown mode must fail
+        run: |
+          for mode in direct proxy cloudflare; do
+            EVERGARDEN_GATEWAY_REAL_IP=$mode docker compose --env-file /dev/null \
+              -f docker-compose.yaml config --quiet gateway
+          done
+          if EVERGARDEN_GATEWAY_REAL_IP=bogus docker compose --env-file /dev/null \
+            -f docker-compose.yaml config --quiet gateway; then
+            echo "an unknown real-IP mode rendered" >&2
+            exit 1
+          fi
+      - run: docker build --tag evergarden-ci:${{ github.sha }} .
+      - run: >-
+          docker build --file deploy/autologin/Dockerfile
+          --build-arg BASE_IMAGE=evergarden-ci:${{ github.sha }}
+          --tag evergarden-autologin-ci:${{ github.sha }} .
+
+  gateway-realip:
+    name: Gateway real-IP smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: direct, proxy and cloudflare modes against forged and proxied headers
+        run: ./deploy/scripts/gateway_realip_smoke.sh
+
+  quickstart:
+    name: Quickstart smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: setup, up --build, loopback login, API key and MCP, down -v
+        env:
+          SMOKE_PROJECT: evergarden-ci
+          SMOKE_TIMEOUT: "420"
+        run: ./deploy/scripts/quickstart_smoke.sh

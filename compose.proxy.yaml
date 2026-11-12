@@ -1,0 +1,28 @@
+# Optional overlay: attach the gateway to an existing external reverse-proxy
+# network (for example Nginx Proxy Manager's) under the stable alias
+# evergarden-gateway, so the proxy can forward to http://evergarden-gateway:8080.
+#
+#   COMPOSE_FILE=docker-compose.yaml:compose.proxy.yaml
+#   EVERGARDEN_PROXY_NETWORK=proxy   # name of the existing network
+#
+# The network must already exist (docker network create <name>); Compose never
+# creates or removes it.
+#
+# The gateway's host port is removed, so only containers on that network reach
+# it. Let the gateway resolve real client addresses from the proxy's
+# X-Forwarded-For (docs/configuration.md, "Real client address"):
+#
+#   EVERGARDEN_GATEWAY_REAL_IP=proxy            # or cloudflare
+#   EVERGARDEN_GATEWAY_TRUSTED_PROXIES=<subnet of the proxy network>
+services:
+  gateway:
+    ports: !reset []
+    networks:
+      proxy:
+        aliases:
+          - evergarden-gateway
+
+networks:
+  proxy:
+    external: true
+    name: ${EVERGARDEN_PROXY_NETWORK:-proxy}

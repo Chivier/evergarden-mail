@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Evergarden">
+  <title>Evergarden</title>
+  <defs>
+    <linearGradient id="eg-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#357a5f"/>
+      <stop offset="1" stop-color="#245a45"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="17" fill="url(#eg-bg)"/>
+  <path d="M19 14h26v6.5H26.5v23H45V50H19z" fill="#ffffff"/>
+  <path d="M26.5 32.2C31.8 25.4 39.6 23.6 47 26.2 43.2 33.4 35.4 36.4 26.5 34.6z" fill="#cfeedd"/>
+  <path d="M28.5 33.3c5.6-1.6 10.6-3.6 15.4-6.2" fill="none" stroke="#2c6851" stroke-width="1.4" stroke-linecap="round"/>
+</svg>

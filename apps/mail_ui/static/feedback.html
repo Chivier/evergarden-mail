@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title data-i18n="feedback.pageTitle">Mail issues · Evergarden</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/tokens.css">
+  <link rel="stylesheet" href="/assets/components.css">
+  <link rel="stylesheet" href="/assets/feedback.css">
+  <script src="/assets/i18n.js" defer></script>
+  <script src="/assets/locale-en.js" defer></script>
+  <script src="/assets/locale-zh-CN.js" defer></script>
+  <script src="/assets/http.js" defer></script>
+  <script src="/assets/feedback.js" defer></script>
+</head>
+<body class="page">
+<header class="eg-topbar">
+  <a class="eg-brand" href="/"><img class="eg-logo" src="/assets/logo.svg" alt="" width="30" height="30"><span>Evergarden</span></a>
+  <span class="eg-topbar-title" data-i18n="feedback.title">Mail issues and feedback</span>
+  <span class="eg-spacer"></span>
+  <div data-lang-switch></div>
+  <a class="eg-back" href="/" data-i18n="feedback.back">← Mail workbench</a>
+</header>
+<main class="feedback-main">
+  <h1 data-i18n="feedback.title">Mail issues and feedback</h1>
+  <p class="lead" data-i18n="feedback.lead">Messages whose location is missing stay in the index. Verify the location before acting on them; recording a decision does not archive or delete anything.</p>
+  <p id="notice" class="notice-error" role="alert"></p>
+  <section class="card">
+    <h2 data-i18n="feedback.pending">Messages to verify</h2>
+    <div class="toolbar-row">
+      <label class="inline-field"><span data-i18n="feedback.statusFilter">Location status</span> <select id="status">
+        <option value="missing" data-i18n="feedback.status.missing">Location missing</option>
+        <option value="uidvalidity_changed" data-i18n="feedback.status.uidvalidity_changed">UIDVALIDITY changed</option>
+        <option value="auth_failed" data-i18n="feedback.status.auth_failed">Authentication failed</option>
+        <option value="unverified" data-i18n="feedback.status.unverified">Not yet verified</option>
+        <option value="ambiguous" data-i18n="feedback.status.ambiguous">Ambiguous match</option>
+        <option value="moved_confirmed" data-i18n="feedback.status.moved_confirmed">Confirmed moved</option>
+      </select></label>
+      <button id="refresh" class="secondary" type="button" data-i18n="common.refresh">Refresh</button>
+    </div>
+    <p id="counts" class="muted"></p>
+    <div class="table-wrap"><table>
+      <thead><tr><th data-i18n="feedback.col.message">Message</th><th data-i18n="feedback.col.location">Account / indexed folder</th><th data-i18n="feedback.col.reason">Reason</th><th data-i18n="feedback.col.diagnose">Diagnosis</th></tr></thead>
+      <tbody id="messages"></tbody>
+    </table></div>
+    <div class="toolbar-row"><button id="previous" class="secondary" type="button" data-i18n="common.previousPage">Previous page</button> <button id="next" class="secondary" type="button" data-i18n="common.nextPage">Next page</button></div>
+  </section>
+  <section id="detail" class="card" hidden>
+    <h2 data-i18n="feedback.diagnostics">Read-only diagnostics</h2>
+    <p id="explanation"></p>
+    <pre id="diagnostic"></pre>
+    <form id="feedbackForm" class="toolbar-row">
+      <label class="inline-field"><span data-i18n="feedback.action">Intended action</span> <select id="action">
+        <option value="archive" data-i18n="kind.archive">Archive</option>
+        <option value="trash" data-i18n="kind.trash">Move to trash</option>
+        <option value="move" data-i18n="kind.move">Move</option>
+        <option value="mark" data-i18n="kind.mark">Mark</option>
+      </select></label>
+      <label class="inline-field"><span data-i18n="feedback.decision">Your decision</span> <select id="decision">
+        <option value="pending" data-i18n="feedback.decision.pending">Undecided</option>
+        <option value="authorized" data-i18n="feedback.decision.authorized">Explicitly authorized this intent</option>
+        <option value="rejected" data-i18n="feedback.decision.rejected">Do not act</option>
+      </select></label>
+      <button id="submit" class="primary" type="submit" data-i18n="feedback.submit">Submit feedback and record decision</button>
+    </form>
+    <p class="muted" data-i18n="feedback.recoveryNote">After recovery, create a fresh approval. For operations with an uncertain result, check the source and destination folders first.</p>
+    <p id="issueLink"></p>
+    <pre id="issue"></pre>
+  </section>
+  <section class="card">
+    <h2 data-i18n="feedback.issues">Feedback tickets</h2>
+    <div class="toolbar-row">
+      <label class="check-label"><input id="restored" type="checkbox"> <span data-i18n="feedback.restoredOnly">Only tickets that are actionable again</span></label>
+      <button id="refreshIssues" class="secondary" type="button" data-i18n="feedback.refreshIssues">Refresh tickets</button>
+    </div>
+    <ul id="issues" class="issue-list"></ul>
+    <button id="moreIssues" class="secondary" type="button" data-i18n="feedback.moreIssues">More tickets</button>
+  </section>
+</main>
+</body>
+</html>

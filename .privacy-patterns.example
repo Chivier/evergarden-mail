@@ -1,0 +1,10 @@
+# Private literals for deploy/scripts/check_repo_privacy.py: your own host
+# names, domains, account names. Copy this file OUTSIDE the repository (or to
+# the ignored .local/privacy-patterns) and point the scanner at it:
+#   EVERGARDEN_PRIVACY_PATTERNS=~/private/evergarden-privacy-patterns
+#   python deploy/scripts/check_repo_privacy.py --patterns <path>
+# One literal per line; prefix a line with re: only when a regular expression
+# is required. The scanner refuses a list inside the published tree and never
+# prints the matched value.
+private-handle
+re:private[._-]account

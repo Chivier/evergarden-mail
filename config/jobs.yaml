@@ -1,0 +1,18 @@
+# Scheduled and manual worker jobs. Cron expressions are evaluated in
+# EVERGARDEN_SCHEDULE_TIMEZONE (default UTC) by `python -m apps.worker.main due`,
+# which a host timer or cron entry should invoke every minute or at the
+# scheduled minutes. Manual jobs run only with `python -m apps.worker.main run`.
+version: 2
+jobs:
+  archive-sync:
+    schedule: "3 * * * *"
+    description: Read-only IMAP sync of every enabled account into the local archive.
+  oauth-watchdog:
+    schedule: "5 * * * *"
+    description: Check that every OAuth account still has a usable refresh token.
+  weekly-rollover:
+    trigger: manual
+    description: Copy-only rollover of archive messages older than seven days.
+  cold-export:
+    trigger: manual
+    description: Write a content-free inventory of the archive to the report directory.

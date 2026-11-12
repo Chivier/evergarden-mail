@@ -1,0 +1,91 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "evergarden-mail"
+version = "0.1.0"
+description = "Self-hosted mail workbench and MCP server with human-approved writes"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Evergarden contributors"}]
+keywords = ["email", "imap", "mcp", "model-context-protocol", "self-hosted", "human-in-the-loop"]
+classifiers = [
+  "Environment :: Web Environment",
+  "Framework :: FastAPI",
+  "Intended Audience :: End Users/Desktop",
+  "Intended Audience :: System Administrators",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Communications :: Email",
+  "Topic :: Communications :: Email :: Post-Office :: IMAP",
+]
+dependencies = [
+  "croniter>=6,<7",
+  "cryptography>=45,<51",
+  "fastapi>=0.116,<1",
+  "httpx>=0.28,<1",
+  "PyJWT[crypto]>=2.10,<3",
+  "pydantic>=2.11,<3",
+  "pydantic-settings>=2.10,<3",
+  "psycopg[binary]>=3.2,<4",
+  "PyYAML>=6,<7",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[project.urls]
+Homepage = "https://github.com/Chivier/evergarden-mail"
+Documentation = "https://github.com/Chivier/evergarden-mail/tree/main/docs"
+Issues = "https://github.com/Chivier/evergarden-mail/issues"
+Source = "https://github.com/Chivier/evergarden-mail"
+
+[dependency-groups]
+dev = [
+  "coverage[toml]>=7.10,<8",
+  "pre-commit>=4.3,<5",
+  "pytest>=8.4,<10",
+  "pytest-asyncio>=1.1,<2",
+  "ruff>=0.12,<1",
+]
+
+[project.scripts]
+evergarden-worker = "apps.worker.main:main"
+evergarden-account-config = "evergarden.mail.account_admin:main"
+evergarden-provider-credential = "evergarden.mail.credential_admin:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["evergarden", "apps"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"addons/thunderbird" = "apps/mail_ui/thunderbird"
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["evergarden", "apps"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "RUF"]
+ignore = ["S101", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S108"]

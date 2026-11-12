@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title data-i18n="send.pageTitle">Send approval · Evergarden</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/tokens.css">
+  <link rel="stylesheet" href="/assets/components.css">
+  <link rel="stylesheet" href="/assets/approval.css">
+  <script src="/assets/i18n.js" defer></script>
+  <script src="/assets/locale-en.js" defer></script>
+  <script src="/assets/locale-zh-CN.js" defer></script>
+  <script src="/assets/http.js" defer></script>
+  <script src="/assets/send.js" defer></script>
+</head>
+<body class="page">
+  <header class="eg-topbar">
+    <a class="eg-brand" href="/review#pending"><img class="eg-logo" src="/assets/logo.svg" alt="" width="30" height="30"><span>Evergarden</span></a>
+    <span class="eg-topbar-title" data-i18n="send.title">Send approval</span>
+    <span id="identity" class="identity eg-identity" data-i18n-once="approvals.identity.checking">Checking reviewer session…</span>
+    <span class="eg-spacer"></span>
+    <div data-lang-switch></div>
+    <a class="eg-back" href="/review#pending" data-i18n="approvals.backToList">← Back to approvals</a>
+  </header>
+  <main class="card send-card">
+    <h1 data-i18n="send.title">Send approval</h1>
+    <section class="summary" aria-label="Approval status" data-i18n-aria-label="send.summary">
+      <div><span data-i18n="send.operation">Operation</span><strong id="operation">—</strong></div>
+      <div><span data-i18n="approvals.expiry">Valid until</span><strong id="expiry">—</strong></div>
+      <div><span data-i18n="approvals.col.status">Status</span><strong id="status">—</strong></div>
+    </section>
+    <p class="warning" data-i18n="send.warning">Check the recipients and the full message. Once approved, the sender can send exactly this content once.</p>
+    <article id="mailPreview" class="mail-preview" hidden aria-label="Message to send" data-i18n-aria-label="send.preview">
+      <h2 id="subject"></h2>
+      <dl class="mail-envelope">
+        <dt data-i18n="send.account">Mailbox</dt><dd id="account"></dd>
+        <dt data-i18n="envelope.from">From</dt><dd id="from"></dd>
+        <dt data-i18n="envelope.to">To</dt><dd id="to"></dd>
+        <dt data-i18n="envelope.cc">Cc</dt><dd id="cc"></dd>
+        <dt data-i18n="envelope.bcc">Bcc</dt><dd id="bcc"></dd>
+      </dl>
+      <section aria-labelledby="bodyHeading"><h3 id="bodyHeading" data-i18n="send.body">Message body</h3><div id="mailBody" class="mail-body" dir="auto"></div></section>
+      <section aria-labelledby="attachmentsHeading"><h3 id="attachmentsHeading" data-i18n="mail.attachments">Attachments</h3><ul id="attachments" class="mail-attachments"></ul></section>
+    </article>
+    <details class="packet-details"><summary data-i18n="approvals.packet.show">Show full approval data</summary><pre id="packet" class="packet" data-i18n-once="send.packetLoading">Reading the approval request…</pre></details>
+    <label class="confirm"><input id="confirm" type="checkbox" disabled><span data-i18n="send.confirm">I have checked the recipients, Cc, Bcc, subject, body and attachments, and approve sending this message.</span></label>
+    <button id="approve" type="button" disabled data-i18n="send.approve">Approve sending once</button>
+    <p id="result" class="result" role="status"></p>
+    <p id="executionState" class="execution-state" role="status"></p>
+  </main>
+</body>
+</html>

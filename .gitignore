@@ -1,0 +1,55 @@
+# Python/build caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+dist/
+build/
+*.egg-info/
+
+# Canonical local state: private config, runtime data, secrets, and mail.
+# Everything machine-specific belongs below this single ignored root.
+.local/
+
+# Defence in depth: never track runtime state even outside the .local root.
+.env
+.env.*
+!.env.example
+data/
+backups/
+logs/
+run/
+secrets/
+*.db
+*.db-*
+*.sqlite*
+*.pem
+*.key
+*.token
+*.agekey
+credentials.enc
+config/local/
+config/*.sops.yaml
+.privacy-patterns
+
+# Mail payloads and attachments
+attachments/
+maildir/
+*.eml
+*.mbox
+
+# Internal history and agent workspace (kept locally, never published)
+docs/internal/
+plan.md
+.claude/
+
+# Local/editor/OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~

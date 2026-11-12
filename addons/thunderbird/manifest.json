@@ -1,0 +1,10 @@
+{
+  "manifest_version": 2,
+  "name": "Evergarden Mail Bridge",
+  "version": "1.0.0",
+  "description": "Receive-only company mail copies and notifications for Evergarden.",
+  "browser_specific_settings": {"gecko": {"id": "evergarden-bridge@example.invalid", "strict_min_version": "128.0"}},
+  "permissions": ["accountsRead", "messagesRead", "storage", "unlimitedStorage", "alarms", "https://evergarden.example.invalid/*"],
+  "background": {"scripts": ["background.js"]},
+  "options_ui": {"page": "options.html", "open_in_tab": true}
+}

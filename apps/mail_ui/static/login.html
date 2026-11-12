@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title data-i18n="login.pageTitle">Sign in · Evergarden</title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/assets/tokens.css">
+    <link rel="stylesheet" href="/assets/components.css">
+    <link rel="stylesheet" href="/assets/styles.css">
+    <script src="/assets/i18n.js" defer></script>
+    <script src="/assets/locale-en.js" defer></script>
+    <script src="/assets/locale-zh-CN.js" defer></script>
+    <script src="/assets/http.js" defer></script>
+    <script src="/assets/login.js" defer></script>
+  </head>
+  <body class="login-body">
+    <div class="login-lang" data-lang-switch></div>
+    <main class="login-card">
+      <img class="login-logo" src="/assets/logo.svg" alt="" width="52" height="52">
+      <p class="login-eyebrow" data-i18n="login.eyebrow">Private mail workspace</p>
+      <h1 data-i18n="login.title">Welcome back to Evergarden</h1>
+      <p class="login-copy" data-i18n="login.copy">Sign in with this service's own administrator account. Mailbox passwords, OAuth and MCP credentials never appear here.</p>
+      <form id="loginForm" autocomplete="on">
+        <label><span data-i18n="login.username">Username</span><input id="username" name="username" type="text" maxlength="64" autocomplete="username" autofocus required></label>
+        <label><span data-i18n="login.password">Password</span><input id="password" name="password" type="password" maxlength="1024" autocomplete="current-password" required></label>
+        <button id="loginButton" class="primary full" type="submit" data-i18n="login.submit">Sign in to the workbench</button>
+      </form>
+      <p id="loginResult" class="login-result" role="status" aria-live="polite"></p>
+      <p class="login-footnote" data-i18n="login.footnote">Administrator sessions last 7 days by default. Signing out ends every session of this administrator on all devices, and so does rotating the session key.</p>
+    </main>
+  </body>
+</html>

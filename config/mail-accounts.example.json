@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "accounts": [
+    {
+      "alias": "work",
+      "address": "mailbox@work.example",
+      "send_from_addresses": ["public-name@work.example", "mailbox@work.example"],
+      "imap_host": "outlook.office365.com",
+      "imap_port": 993,
+      "smtp_host": "smtp.office365.com",
+      "smtp_port": 587,
+      "smtp_mode": "starttls",
+      "auth_kind": "oauth2",
+      "credential_record": "microsoft:work",
+      "folders": ["INBOX", "Archive", "Unrelated"],
+      "archive_folder": "Archive",
+      "sent_folder": "Sent Items",
+      "trash_folder": "Deleted Items",
+      "safe_move_folders": ["Archive", "Later", "Unrelated"],
+      "copy_preserve_source_fallback": false,
+      "enabled": true
+    },
+    {
+      "alias": "personal",
+      "address": "mailbox@personal.example",
+      "send_from_addresses": ["mailbox@personal.example"],
+      "imap_host": "imap.example.com",
+      "imap_port": 993,
+      "smtp_host": "smtp.example.com",
+      "smtp_port": 465,
+      "smtp_mode": "ssl",
+      "auth_kind": "password",
+      "credential_record": "password:personal",
+      "folders": ["INBOX", "Archive", "Unrelated"],
+      "archive_folder": "Archive",
+      "sent_folder": "Sent",
+      "trash_folder": "Trash",
+      "safe_move_folders": ["Archive", "Notes", "Unrelated"],
+      "copy_preserve_source_fallback": false,
+      "enabled": true
+    }
+  ]
+}

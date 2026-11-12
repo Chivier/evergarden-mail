@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title data-i18n="mail.pageTitle">Mail · Evergarden</title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/assets/tokens.css">
+    <link rel="stylesheet" href="/assets/components.css">
+    <link rel="stylesheet" href="/assets/styles.css">
+    <script src="/assets/i18n.js" defer></script>
+    <script src="/assets/locale-en.js" defer></script>
+    <script src="/assets/locale-zh-CN.js" defer></script>
+    <script src="/assets/ui.js" defer></script>
+    <script src="/assets/http.js" defer></script>
+    <script src="/assets/app.js" defer></script>
+    <script src="/assets/bridge.js" defer></script>
+  </head>
+  <body>
+    <div id="shell" class="shell">
+      <aside id="sidebar" class="sidebar" aria-label="Mailbox navigation" data-i18n-aria-label="mail.nav.label">
+        <div class="brand">
+          <img class="brand-logo" src="/assets/logo.svg" alt="" width="38" height="38">
+          <div><strong>Evergarden</strong><span data-i18n="mail.brand.tagline">Mail workbench</span></div>
+          <button id="navClose" class="icon-button nav-close" type="button" aria-label="Close menu" data-i18n-aria-label="mail.nav.close">×</button>
+        </div>
+        <button id="composeButton" class="primary full" type="button" data-i18n="mail.compose">Compose</button>
+        <nav aria-label="Views" data-i18n-aria-label="mail.nav.views">
+          <button class="nav-item active" type="button" data-view="today" aria-current="page"><span data-i18n="mail.nav.today">Today</span><b id="todayCount">—</b></button>
+          <button class="nav-item" type="button" data-view="unread"><span data-i18n="mail.nav.unread">Unread</span><b id="unreadCount">—</b></button>
+          <button class="nav-item" type="button" data-view="all"><span data-i18n="mail.nav.all">All mail</span></button>
+          <a class="nav-item" href="/feedback" data-i18n="mail.nav.feedback">Mail issues and feedback</a>
+        </nav>
+        <div class="section-heading"><span data-i18n="mail.nav.mailboxes">Mailboxes</span><button id="accountAdminButton" class="icon-button" type="button" title="Manage mailboxes" aria-label="Manage mailboxes" data-i18n-title="mail.nav.manageMailboxes" data-i18n-aria-label="mail.nav.manageMailboxes">+</button></div>
+        <div id="accountList" class="account-list"></div>
+        <div class="sidebar-bottom">
+          <button id="bridgeButton" class="nav-item" type="button" hidden><span data-i18n="mail.nav.bridge">Company mail notifications</span> <b id="bridgeUnread">0</b></button>
+          <a class="nav-item" href="/review?batch=trash" target="_blank" rel="noopener" data-i18n="mail.nav.batchTrash">Batch-approve deletions</a>
+          <button id="verificationButton" class="nav-item" type="button"><span data-i18n="mail.nav.codes">Find verification codes</span></button>
+          <button id="preferencesButton" class="nav-item" type="button"><span data-i18n="mail.nav.preferences">Global notes and preferences</span></button>
+          <button id="mcpGuideButton" class="nav-item" type="button"><span data-i18n="mail.nav.mcp">Connect an MCP agent</span></button>
+          <div class="sidebar-lang" data-lang-switch></div>
+          <div class="identity-row"><div id="identity" class="identity" data-i18n-once="mail.identity.checking">Checking your session…</div><button id="logoutButton" class="text-button" type="button" title="Sign out on all devices and browsers" data-i18n="mail.logout" data-i18n-title="mail.logoutTitle">Sign out</button></div>
+        </div>
+      </aside>
+      <div id="navBackdrop" class="nav-backdrop" hidden></div>
+
+      <main class="workspace">
+        <header class="toolbar">
+          <button id="menuButton" class="icon-button menu-button" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Open menu" data-i18n-aria-label="mail.nav.open"><span class="menu-icon" aria-hidden="true"></span></button>
+          <form id="searchForm" role="search">
+            <label class="search-box">
+              <span class="search-icon" aria-hidden="true"></span>
+              <input id="searchInput" type="search" maxlength="500" placeholder="Search subject, sender or body" aria-label="Search mail" autocomplete="off" data-i18n-placeholder="mail.search.placeholder" data-i18n-aria-label="mail.search.label">
+            </label>
+          </form>
+          <button id="syncButton" class="secondary" type="button" data-i18n="mail.sync">Sync mail</button>
+          <div id="syncState" class="status-pill" role="status" data-i18n-live="mail.sync.readOnly">Read-only sync</div>
+        </header>
+
+        <section class="mail-column" aria-label="Message list" data-i18n-aria-label="mail.list.label">
+          <div class="column-heading">
+            <div><p id="eyebrow" data-i18n-once="mail.heading.today.eyebrow">Today</p><h1 id="viewTitle" data-i18n-once="mail.heading.today.title">Mail received today</h1></div>
+            <span id="resultCount" class="muted" role="status" data-i18n-once="common.loading">Loading</span>
+          </div>
+          <div id="notice" class="notice" role="status" hidden></div>
+          <div id="messageList" class="message-list"></div>
+          <button id="composeFab" class="primary compose-fab" type="button" data-i18n="mail.compose">Compose</button>
+        </section>
+
+        <section id="reader" class="reader empty" aria-label="Message" data-i18n-aria-label="mail.reader.label">
+          <div id="readerEmpty" class="empty-state">
+            <img class="empty-logo" src="/assets/logo.svg" alt="" width="56" height="56">
+            <h2 data-i18n="mail.reader.emptyTitle">Select a message</h2>
+            <p data-i18n="mail.reader.emptyBody">Bodies are shown as safe plain text. Every change becomes an approval request you can inspect first.</p>
+          </div>
+          <article id="readerContent" hidden>
+            <div class="reader-header">
+              <button id="readerBack" class="text-button reader-back" type="button" data-i18n="mail.reader.back">← Back to list</button>
+              <div class="reader-kicker"><span id="messageAccount"></span><span class="kicker-end"><span id="messageDate"></span><button id="bodyFontButton" class="text-button" type="button" aria-pressed="false" data-i18n="mail.reader.monospace">Monospace</button></span></div>
+              <h2 id="messageSubject"></h2>
+              <div id="messageSender" class="sender"></div>
+              <div id="messageRecipients" class="recipients"></div>
+            </div>
+            <div class="action-row" role="group" aria-label="Message actions" data-i18n-aria-label="mail.actions.label">
+              <button id="replyButton" class="secondary" type="button" data-i18n="mail.actions.reply">Reply</button>
+              <button id="replyAllButton" class="secondary" type="button" data-i18n="mail.actions.replyAll">Reply all</button>
+              <button id="forwardButton" class="secondary" type="button" data-i18n="mail.actions.forward">Forward</button>
+              <button id="archiveButton" class="secondary" type="button" data-i18n="mail.actions.archive">Archive</button>
+              <button id="moveButton" class="secondary" type="button" data-i18n="mail.actions.move">Move</button>
+              <button id="markButton" class="secondary" type="button" data-i18n="mail.actions.mark">Mark</button>
+              <button id="trashButton" class="danger-ghost" type="button" data-i18n="mail.actions.trash">Move to trash</button>
+            </div>
+            <pre id="messageBody" class="message-body"></pre>
+            <section id="attachmentSection" class="attachments" hidden>
+              <h3 data-i18n="mail.attachments">Attachments</h3><div id="attachmentList"></div>
+            </section>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="bridgeDialog" class="dialog" aria-labelledby="bridgeTitle">
+      <div class="dialog-heading"><h2 id="bridgeTitle" data-i18n="bridge.title">Company mail notifications · Thunderbird</h2><button id="bridgeClose" class="icon-button" type="button" aria-label="Close" data-i18n-aria-label="common.close">×</button></div>
+      <p id="bridgeStatus" class="bridge-status" role="status" data-i18n-once="bridge.waiting">Waiting for Thunderbird to connect</p>
+      <ol class="bridge-steps">
+        <li data-i18n="bridge.step1">Sign in to the company Google mailbox in Thunderbird.</li>
+        <li data-i18n="bridge.step2">Download the add-on and install it from Thunderbird's Add-ons → Install Add-on From File.</li>
+        <li data-i18n="bridge.step3">Download the pairing file and import it in the add-on settings. Keep Thunderbird running.</li>
+      </ol>
+      <p class="dialog-row"><a class="button-link" href="/bridge/addon.xpi" download data-i18n="bridge.downloadAddon">Download the Thunderbird add-on</a> <button id="bridgePair" class="secondary" type="button" data-i18n="bridge.downloadPairing">Download pairing file</button></p>
+      <p class="safety-copy" data-i18n="bridge.pairingNote">The pairing file can only upload company mail, so keep it safe; pairing again invalidates the old file. The first run backfills the last 7 days, up to 16 MiB per message.</p>
+      <div class="dialog-row">
+        <button id="bridgeDesktop" class="secondary" type="button" data-i18n="bridge.desktop">Enable desktop alerts</button>
+        <button id="bridgeRead" class="secondary" type="button" data-i18n="bridge.markRead">Mark shown notifications as read</button>
+        <button id="bridgeRevoke" class="danger-ghost" type="button" data-i18n="bridge.disconnect">Disconnect bridge</button>
+      </div>
+      <div id="bridgeNotifications" class="message-list bridge-list"></div>
+    </dialog>
+
+    <dialog id="composeDialog" class="dialog compose-dialog" aria-labelledby="composeTitle">
+      <form id="composeForm">
+        <div class="dialog-heading"><div><p data-i18n="compose.eyebrow">Review first</p><h2 id="composeTitle" data-i18n-live="compose.title.send">New message</h2></div><button type="button" class="icon-button close-dialog" aria-label="Close" data-i18n-aria-label="common.close">×</button></div>
+        <input id="composeMode" type="hidden" value="send">
+        <input id="composeMessageId" type="hidden">
+        <div class="form-grid">
+          <label><span data-i18n="compose.from">From mailbox</span><select id="composeAccount" required></select></label>
+          <label><span data-i18n="compose.to">To</span><input id="composeTo" type="text" required placeholder="name@example.com, separate several with commas" data-i18n-placeholder="compose.toPlaceholder"></label>
+          <label><span data-i18n="compose.cc">Cc</span><input id="composeCc" type="text" placeholder="Optional" data-i18n-placeholder="common.optional"></label>
+          <label id="bccLabel"><span data-i18n="compose.bcc">Bcc</span><input id="composeBcc" type="text" placeholder="Optional" data-i18n-placeholder="common.optional"></label>
+          <label class="wide"><span data-i18n="compose.subject">Subject</span><input id="composeSubject" type="text" maxlength="998" required></label>
+          <label class="wide"><span data-i18n="compose.body">Message</span><textarea id="composeBody" rows="14" maxlength="100000" required></textarea></label>
+          <label class="wide"><span data-i18n="compose.attachments">Attachments</span><input id="composeFiles" type="file" multiple></label>
+          <div id="composeAttachmentList" class="wide compose-attachments"></div>
+        </div>
+        <p class="safety-copy" data-i18n="compose.safety">Submitting only creates an immutable approval request; nothing is sent directly.</p>
+        <div class="dialog-actions"><button type="button" class="secondary close-dialog" data-i18n="common.cancel">Cancel</button><button type="submit" class="primary" data-i18n="compose.submit">Create approval request</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="reviewDialog" class="dialog review-dialog" aria-labelledby="reviewTitle">
+      <div class="dialog-heading"><div><p data-i18n="review.eyebrow">Human approval required</p><h2 id="reviewTitle" data-i18n="review.title">Check the immutable operation</h2></div><button type="button" class="icon-button close-dialog" aria-label="Close" data-i18n-aria-label="common.close">×</button></div>
+      <div id="reviewWarning" class="review-warning"></div>
+      <pre id="reviewPacket" class="review-packet"></pre>
+      <div id="reviewStatus" class="approval-status" role="status" data-i18n-once="review.waiting">Waiting for human approval</div>
+      <div class="dialog-actions split">
+        <a id="approvalLink" class="secondary button-link" target="_blank" rel="noopener" data-i18n="review.openPage">Open the approval page</a>
+        <div><button id="checkApprovalButton" class="secondary" type="button" data-i18n="review.check">Check approval status</button><button id="executeApprovedButton" class="primary" type="button" disabled data-i18n="review.execute">Run approved operation</button></div>
+      </div>
+    </dialog>
+
+    <dialog id="moveDialog" class="dialog small-dialog" aria-labelledby="moveTitle">
+      <form id="moveForm">
+        <div class="dialog-heading"><div><p data-i18n="move.eyebrow">Allowlisted folders only</p><h2 id="moveTitle" data-i18n="move.title">Move message</h2></div><button type="button" class="icon-button close-dialog" aria-label="Close" data-i18n-aria-label="common.close">×</button></div>
+        <label><span data-i18n="move.destination">Destination folder</span><select id="moveDestination" required></select></label>
+        <p id="moveEmpty" class="review-warning" hidden data-i18n="move.none">This mailbox has no folders configured as move destinations.</p>
+        <p class="safety-copy" data-i18n="move.safety">The destination must be in this mailbox's allowlist. After approval the server re-checks UIDVALIDITY and the content hash.</p>
+        <div class="dialog-actions"><button type="button" class="secondary close-dialog" data-i18n="common.cancel">Cancel</button><button id="moveSubmit" type="submit" class="primary" data-i18n="move.submit">Prepare move</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="markDialog" class="dialog small-dialog" aria-labelledby="markTitle">
+      <div class="dialog-heading"><div><p data-i18n="mark.eyebrow">Reversible</p><h2 id="markTitle" data-i18n="mark.title">Mark message</h2></div><button type="button" class="icon-button close-dialog" aria-label="Close" data-i18n-aria-label="common.close">×</button></div>
+      <div class="mark-grid" role="group" aria-labelledby="markTitle">
+        <button type="button" class="secondary" data-mark="seen" data-i18n="mark.seen">Mark as read</button>
+        <button type="button" class="secondary" data-mark="unseen" data-i18n="mark.unseen">Mark as unread</button>
+        <button type="button" class="secondary" data-mark="flag" data-i18n="mark.flag">Flag</button>
+        <button type="button" class="secondary" data-mark="unflag" data-i18n="mark.unflag">Remove flag</button>
+      </div>
+      <p class="safety-copy" data-i18n="mark.safety">Marking is reversible but still needs a separate human approval.</p>
+    </dialog>
+
+    <dialog id="preferencesDialog" class="dialog notes-dialog" aria-labelledby="preferencesTitle">
+      <form id="preferencesForm">
+        <div class="dialog-heading"><div><p data-i18n="prefs.eyebrow">Encrypted locally</p><h2 id="preferencesTitle" data-i18n="prefs.title">Global notes and mailbox preferences</h2></div><button type="button" class="icon-button close-dialog" aria-label="Close" data-i18n-aria-label="common.close">×</button></div>
+        <label><span data-i18n="prefs.global">Global notes</span><textarea id="globalNotes" rows="9" maxlength="50000" placeholder="Describe how you generally want mail handled. Never enter passwords, tokens or TOTP secrets." data-i18n-placeholder="prefs.globalPlaceholder"></textarea></label>
+        <label><span data-i18n="prefs.mailbox">Mailbox</span><select id="preferenceAccount"></select></label>
+        <label><span data-i18n="prefs.description">Mailbox description</span><textarea id="mailboxDescription" rows="3" maxlength="2000"></textarea></label>
+        <label><span data-i18n="prefs.preferences">Preferences for this mailbox</span><textarea id="mailboxPreferences" rows="7" maxlength="20000"></textarea></label>
+        <p class="safety-copy" data-i18n="prefs.safety">This text is encrypted on this machine. It is guidance only and cannot override permissions, approvals or the writer fence.</p>
+        <div class="dialog-actions"><button type="button" class="secondary close-dialog" data-i18n="common.cancel">Cancel</button><button type="submit" class="primary" data-i18n="prefs.save">Save</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="verificationDialog" class="dialog verification-dialog" aria-labelledby="verificationTitle">
+      <form id="verificationForm">
+        <div class="dialog-heading"><div><p data-i18n="codes.eyebrow">Read only · never auto-submitted</p><h2 id="verificationTitle" data-i18n="codes.title">Find recent verification codes</h2></div><button type="button" class="icon-button close-dialog" aria-label="Close" data-i18n-aria-label="common.close">×</button></div>
+        <div class="form-grid compact">
+          <label><span data-i18n="codes.mailbox">Mailbox</span><select id="verificationAccount"><option value="" data-i18n="common.allMailboxes">All mailboxes</option></select></label>
+          <label><span data-i18n="codes.domain">Sender domain</span><input id="verificationDomain" type="text" maxlength="253" placeholder="Optional, e.g. example.com" data-i18n-placeholder="codes.domainPlaceholder"></label>
+          <label><span data-i18n="codes.window">Time window</span><select id="verificationMinutes"><option value="10" data-i18n="codes.minutes10">10 minutes</option><option value="15" selected data-i18n="codes.minutes15">15 minutes</option><option value="30" data-i18n="codes.minutes30">30 minutes</option><option value="60" data-i18n="codes.minutes60">60 minutes</option></select></label>
+        </div>
+        <div id="verificationResults" class="code-results" role="status"></div>
+        <div class="dialog-actions"><button type="button" class="secondary close-dialog" data-i18n="common.close">Close</button><button type="submit" class="primary" data-i18n="codes.submit">Search (read only)</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="mcpDialog" class="dialog mcp-dialog" aria-labelledby="mcpTitle">
+      <div class="dialog-heading"><div><p data-i18n="mcp.eyebrow">Connect your agent</p><h2 id="mcpTitle" data-i18n="mcp.title">MCP setup guide</h2></div><button type="button" class="icon-button close-dialog" aria-label="Close" data-i18n-aria-label="common.close">×</button></div>
+      <div class="mcp-facts">
+        <div class="mcp-fact"><span data-i18n="mcp.resource">MCP resource</span><div><code id="mcpResource">—</code><button type="button" class="text-button" data-copy-target="mcpResource" data-i18n="common.copy">Copy</button></div></div>
+        <div id="mcpIssuerFact" class="mcp-fact" hidden><span data-i18n="mcp.issuer">OAuth issuer</span><div><code id="mcpIssuer">—</code><button type="button" class="text-button" data-copy-target="mcpIssuer" data-i18n="common.copy">Copy</button></div></div>
+        <div class="mcp-fact"><span data-i18n="mcp.scopes">Available scopes</span><div><code id="mcpScopes">—</code><button type="button" class="text-button" data-copy-target="mcpScopes" data-i18n="common.copy">Copy</button></div></div>
+      </div>
+      <section class="mcp-keys">
+        <div class="mcp-keys-head"><h3 data-i18n="mcp.keys">API keys</h3><span id="apiKeyCount" class="muted"></span></div>
+        <div id="apiKeysDisabled" class="review-warning" hidden><span data-i18n="mcp.keysDisabled.before">Self-service issuance is off by default. Enable</span> <code>EVERGARDEN_MAIL_UI_API_KEYS_ENABLED</code> <span data-i18n="mcp.keysDisabled.after">to issue keys here; until then ask the administrator for a compatibility token.</span></div>
+        <div id="apiKeyIssued" class="mcp-issued" hidden>
+          <p class="mcp-issued-warning" data-i18n="mcp.issuedWarning">The plaintext is shown only this once. Once you close this window it is gone; if you lose it, revoke it and issue a new one.</p>
+          <div class="mcp-issued-row"><code id="apiKeyToken"></code><button id="copyApiKeyButton" type="button" class="secondary" data-i18n="common.copy">Copy</button></div>
+        </div>
+        <div id="apiKeyList" class="mcp-key-list"></div>
+        <form id="apiKeyForm" class="mcp-key-form">
+          <div class="form-grid compact">
+            <label><span data-i18n="mcp.keyName">Name</span><input id="apiKeyLabel" type="text" maxlength="48" required placeholder="laptop"></label>
+            <label><span data-i18n="mcp.preset">Permission level</span><select id="apiKeyPreset">
+              <option value="readonly" data-i18n="mcp.preset.readonly">Read only</option>
+              <option value="drafting" data-i18n="mcp.preset.drafting">Read + drafts</option>
+              <option value="full" data-i18n="mcp.preset.full">Full</option>
+              <option value="custom" data-i18n="mcp.preset.custom">Custom</option>
+            </select></label>
+            <label><span data-i18n="mcp.ttl">Valid for</span><select id="apiKeyTtl">
+              <option value="30" data-i18n="mcp.ttl30">30 days</option>
+              <option value="90" selected data-i18n="mcp.ttl90">90 days</option>
+              <option value="365" data-i18n="mcp.ttl365">365 days</option>
+            </select></label>
+          </div>
+          <details>
+            <summary data-i18n="mcp.pickScopes">Choose scopes one by one</summary>
+            <div id="apiKeyScopes" class="mcp-scope-grid"></div>
+          </details>
+          <div class="dialog-actions"><button type="submit" class="primary" data-i18n="mcp.createKey">Create API key</button></div>
+        </form>
+      </section>
+      <p class="safety-copy" data-i18n="mcp.tokenSafety">Keep the token in a mode-0600 file on your machine; never paste it into chats, issues or repositories. Issuing and revoking take effect immediately, with no MCP restart.</p>
+      <div class="mcp-tabs" role="group" aria-label="Clients" data-i18n-aria-label="mcp.clients"></div>
+      <div id="mcpSteps" class="mcp-steps"></div>
+      <details>
+        <summary data-i18n="mcp.troubleshoot">Troubleshooting</summary>
+        <ul class="mcp-troubleshoot">
+          <li><code>invalid_token</code>: <span data-i18n="mcp.ts.invalidToken">the token does not match the hash the server registered, or it was rotated; get a fresh one.</span></li>
+          <li><code>403 insufficient_scope</code>: <span data-i18n="mcp.ts.scope">the scopes registered for this client are too narrow; an administrator must widen them and restart MCP.</span></li>
+          <li><span data-i18n="mcp.ts.codexLogin">Codex says</span> <code>Run codex mcp login</code>: <span data-i18n="mcp.ts.codexLoginFix">it is still configured for OAuth; switch to</span> <code>bearer_token_env_var</code>.</li>
+          <li data-i18n="mcp.ts.both">Both OAuth and a static Authorization header are configured: keep only one, otherwise they conflict.</li>
+          <li><span data-i18n="mcp.ts.discovery">Credential-free self-check:</span> <code id="mcpDiscovery">—</code></li>
+        </ul>
+      </details>
+      <div class="dialog-actions"><button type="button" class="secondary close-dialog" data-i18n="common.close">Close</button></div>
+    </dialog>
+
+    <dialog id="accountDialog" class="dialog account-dialog" aria-labelledby="accountTitle">
+      <div class="dialog-heading"><div><p data-i18n="accounts.eyebrow">Private local configuration</p><h2 id="accountTitle" data-i18n="accounts.title">Add or disable mailboxes</h2></div><button type="button" class="icon-button close-dialog" aria-label="Close" data-i18n-aria-label="common.close">×</button></div>
+      <div id="adminDisabled" class="review-warning" hidden data-i18n="accounts.disabled">Mailbox administration is off by default. When enabled it still only edits this machine's private configuration, and changes need a service restart.</div>
+      <div id="managedAccounts" class="managed-accounts"></div>
+      <details>
+        <summary data-i18n="accounts.add">Add a mailbox</summary>
+        <form id="accountForm" class="account-form">
+          <div class="form-grid compact">
+            <label><span data-i18n="accounts.alias">Alias</span><input name="alias" pattern="[a-z][a-z0-9_\-]{0,63}" required></label>
+            <label><span data-i18n="accounts.address">Sign-in address</span><input name="address" type="email" required></label>
+            <label class="wide"><span data-i18n="accounts.sendFrom">Allowed From addresses (comma-separated, first is the default)</span><input name="send_from_addresses" placeholder="public-name@example.com, login@example.com"></label>
+            <label><span data-i18n="accounts.auth">Authentication</span><select name="auth_kind"><option value="oauth2">OAuth 2.0</option><option value="password" data-i18n="accounts.appPassword">App password</option></select></label>
+            <label><span data-i18n="accounts.credential">Credential record</span><input name="credential_record" placeholder="microsoft:&lt;alias&gt;" pattern="[A-Za-z0-9][A-Za-z0-9:_\-]{0,199}" title="Suggested from the alias and authentication. Any stable id works; keep it once a credential is stored." data-i18n-title="accounts.credentialHint" required></label>
+            <label><span data-i18n="accounts.imapHost">IMAP host</span><input name="imap_host" required></label>
+            <label><span data-i18n="accounts.imapPort">IMAP port</span><input name="imap_port" type="number" min="1" max="65535" value="993" required></label>
+            <label><span data-i18n="accounts.smtpHost">SMTP host</span><input name="smtp_host" required></label>
+            <label><span data-i18n="accounts.smtpPort">SMTP port</span><input name="smtp_port" type="number" min="1" max="65535" value="587" required></label>
+            <label><span data-i18n="accounts.smtpMode">SMTP security</span><select name="smtp_mode"><option value="starttls">STARTTLS</option><option value="ssl" data-i18n="accounts.implicitTls">Implicit TLS</option></select></label>
+            <label><span data-i18n="accounts.archiveFolder">Archive folder</span><input name="archive_folder" value="Archive" required></label>
+            <label><span data-i18n="accounts.sentFolder">Sent folder</span><input name="sent_folder" value="Sent" required></label>
+            <label><span data-i18n="accounts.trashFolder">Trash folder</span><input name="trash_folder" value="Trash" required></label>
+            <label class="wide"><span data-i18n="accounts.folders">Folders to sync</span><input name="folders" value="INBOX, Archive" required></label>
+            <label class="wide"><span data-i18n="accounts.safeMove">Allowed move destinations</span><input name="safe_move_folders" value="Archive" required></label>
+            <label class="wide check-label"><input name="copy_preserve_source_fallback" type="checkbox"> <span data-i18n="accounts.copyFallback">If the provider has no native MOVE, allow COPY and keep the source message</span></label>
+          </div>
+          <p class="safety-copy" data-i18n="accounts.safety">No passwords or tokens are accepted here. OAuth and MFA are completed on separate human pages; "Disable" only deactivates the mailbox and keeps its credentials and archive.</p>
+          <div class="dialog-actions"><button type="submit" class="primary" data-i18n="accounts.save">Save private configuration</button></div>
+        </form>
+      </details>
+    </dialog>
+  </body>
+</html>

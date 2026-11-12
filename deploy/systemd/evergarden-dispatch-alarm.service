@@ -1,0 +1,10 @@
+# Installed by deploy/scripts/install_production_timer.sh, which replaces
+# @EVERGARDEN_ROOT@ with the deployment root.
+[Unit]
+Description=Latch an Evergarden dispatch failure until reviewed
+
+[Service]
+Type=oneshot
+WorkingDirectory=@EVERGARDEN_ROOT@
+Environment=EVERGARDEN_ROOT=@EVERGARDEN_ROOT@
+ExecStart=@EVERGARDEN_ROOT@/deploy/scripts/record_dispatch_failure.sh

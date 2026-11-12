@@ -1,0 +1,18 @@
+# Secret-scanning rules for gitleaks 8.30.1 (pinned in .github/workflows/ci.yml
+# and deploy/scripts/check_repo_secrets.py). [[allowlists]] needs 8.25 or newer.
+#
+# Only value-level placeholders are allowed. There is deliberately no path
+# allowlist: a real secret in a test fixture, an example file or a config
+# document must fail the scan like anywhere else.
+title = "Evergarden secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documented placeholders and synthetic test values"
+regexTarget = "match"
+regexes = [
+  '''replace-with-[a-z0-9-]+''',
+  '''test-only-[A-Za-z0-9_-]+''',
+]

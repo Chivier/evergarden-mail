@@ -1,0 +1,46 @@
+# Local hooks only; they use the project's locked tool versions (uv) and the
+# gitleaks binary pinned in .gitleaks.toml (8.30.1). Install with
+#   uv run --frozen pre-commit install --hook-type pre-commit --hook-type pre-push
+# Private privacy patterns: export EVERGARDEN_PRIVACY_PATTERNS=/path/outside/repo
+# (or keep them in the ignored .local/privacy-patterns).
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --frozen ruff check .
+        language: system
+        pass_filenames: false
+      - id: ruff-format-check
+        name: ruff format check
+        entry: uv run --frozen ruff format --check .
+        language: system
+        pass_filenames: false
+      - id: frontend-tests
+        name: frontend unit tests
+        entry: bash -c 'node --test tests/frontend/*.test.js'
+        language: system
+        pass_filenames: false
+        files: ^(apps/.*\.(js|html|css)|tests/frontend/.*)$
+      - id: gitleaks
+        name: repository-visible gitleaks scan
+        entry: uv run --frozen python deploy/scripts/check_repo_secrets.py
+        language: system
+        pass_filenames: false
+      - id: repository-privacy
+        name: repository tree privacy scan
+        entry: uv run --frozen python deploy/scripts/check_repo_privacy.py
+        language: system
+        pass_filenames: false
+      - id: repository-history-privacy
+        name: pushed-history privacy scan before push
+        entry: uv run --frozen python deploy/scripts/check_repo_privacy.py --history
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+      - id: gitleaks-history
+        name: fetched-history secret scan before push
+        entry: gitleaks git --config .gitleaks.toml --no-banner --redact .
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

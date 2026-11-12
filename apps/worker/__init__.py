@@ -1,0 +1,1 @@
+"""Scheduled job worker CLI."""

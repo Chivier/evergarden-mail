@@ -1,0 +1,17 @@
+# Host-timer alternative to the in-stack `scheduler` compose profile. Installed
+# by deploy/scripts/install_production_timer.sh, which replaces @EVERGARDEN_ROOT@
+# with the deployment root. Compose reads <root>/.env there (COMPOSE_FILE,
+# COMPOSE_PROFILES, EVERGARDEN_COMPOSE_PROJECT), so any overlay listed in
+# COMPOSE_FILE applies to this run as well.
+[Unit]
+Description=Evergarden due-job dispatcher
+OnFailure=evergarden-dispatch-alarm.service
+After=default.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=@EVERGARDEN_ROOT@
+ExecStart=/usr/bin/env docker compose run --rm worker python -m apps.worker.main due
+TimeoutStartSec=45min
+Nice=10
+IOSchedulingClass=idle
